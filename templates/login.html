@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAI-ITD-DLP | Secure Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #0f9e6e;
+    --green-dim: #0b8560;
+    --red: #e0253a;
+    --blue: #1a6fef;
+    --bg: #ccd9f8;
+    --surface: #ffffff;
+    --surface2: #eef2fb;
+    --border: #d0daf0;
+    --text: #1a2340;
+    --muted: #6b7fa8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(26,111,239,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(26,111,239,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes gridMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(40px); }
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.08;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 400px; height: 400px; background: var(--green); top: -100px; left: -100px; }
+  .orb-2 { width: 300px; height: 300px; background: var(--blue); bottom: -80px; right: -80px; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 460px;
+    padding: 20px;
+  }
+
+  /* Header */
+  .logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    border: 2px solid var(--blue);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    animation: pulse-border 2s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 8px var(--blue); }
+    50% { box-shadow: 0 0 20px var(--blue), 0 0 40px rgba(26,111,239,0.2); }
+  }
+
+  .logo-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--blue);
+    letter-spacing: 2px;
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    animation: scan-line 3s linear infinite;
+  }
+
+  @keyframes scan-line {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+
+  .step {
+    width: 28px; height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+
+  .step.active { background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+  .step.done { background: var(--green-dim); }
+
+  .step-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    letter-spacing: 1px;
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* Form */
+  .field {
+    margin-bottom: 20px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(26,111,239,0.1);
+  }
+
+  input::placeholder { color: var(--muted); }
+
+  /* OTP input */
+  .otp-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .otp-digit {
+    aspect-ratio: 1;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--blue);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 0;
+  }
+
+  .otp-digit:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 12px rgba(26,111,239,0.2);
+  }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 15px;
+    background: transparent;
+    border: 1px solid var(--blue);
+    border-radius: 8px;
+    color: var(--blue);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--blue);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    opacity: 0.1;
+  }
+
+  .btn:hover::before { transform: translateX(0); }
+  .btn:hover { box-shadow: 0 0 20px rgba(26,111,239,0.2); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:disabled::before { display: none; }
+
+  /* Alert */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    display: none;
+  }
+
+  .alert.error {
+    background: rgba(255,51,102,0.1);
+    border: 1px solid rgba(255,51,102,0.3);
+    color: var(--red);
+    display: block;
+  }
+
+  .alert.success {
+    background: rgba(15,158,110,0.07);
+    border: 1px solid rgba(15,158,110,0.3);
+    color: var(--green);
+    display: block;
+  }
+
+  /* Timer */
+  .timer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  #timer-display { color: var(--blue); font-weight: bold; }
+  #timer-display.expiring { color: var(--red); }
+
+  .resend-btn {
+    background: none;
+    border: none;
+    color: var(--blue);
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 0;
+    text-decoration: underline;
+    display: none;
+  }
+
+  .resend-btn:hover { color: var(--blue); }
+
+  /* Security notice */
+  .security-notice {
+    margin-top: 24px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .notice-icon { color: var(--blue); font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Loader */
+  .btn-loading::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--blue);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Hidden panels */
+  #otp-panel { display: none; }
+  #success-panel { display: none; text-align: center; padding: 20px 0; }
+
+  .success-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: pop 0.5s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0); }
+    80% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
+  .success-text { font-size: 18px; color: var(--blue); font-weight: 700; letter-spacing: 2px; }
+  .success-sub { font-size: 13px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', monospace; }
+
+  /* System status */
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 24px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+    display: inline-block;
+    margin-right: 5px;
+    animation: blink 2s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="container">
+  <div class="logo">
+    <div class="logo-badge">
+      <div class="logo-icon">🛡</div>
+      <div>
+        <div class="logo-title">XAI-ITD-DLP</div>
+      </div>
+    </div>
+    <div class="logo-sub">Insider Threat Detection &amp; Data Loss Prevention</div>
+  </div>
+
+  <div class="card">
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+      <div class="step active" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <span class="step-label" id="step-label-text">STEP 1 / 2</span>
+    </div>
+
+    <!-- Step 1: Credentials -->
+    <div id="creds-panel">
+      <h2>Identity Verification</h2>
+      <div class="subtitle">> ENTER CREDENTIALS TO PROCEED</div>
+
+      <div id="alert-box" class="alert"></div>
+
+      <div class="field">
+        <label>Employee Email</label>
+        <input type="email" id="email-input" placeholder="you@company.com" autocomplete="off">
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="pass-input" placeholder="••••••••••">
+      </div>
+
+      <button class="btn" id="send-otp-btn" onclick="requestOTP()">
+        SEND OTP →
+      </button>
+
+      <div class="security-notice">
+        <span class="notice-icon">⚠</span>
+        <span>This system monitors all activity on company devices. Unauthorized access attempts are logged and reported to security administration.</span>
+      </div>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div id="otp-panel">
+      <h2>OTP Verification</h2>
+      <div class="subtitle" id="otp-subtitle">> CHECK YOUR EMAIL</div>
+
+      <div id="otp-alert-box" class="alert"></div>
+
+      <div class="otp-grid" id="otp-grid">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+      </div>
+
+      <button class="btn" id="verify-btn" onclick="verifyOTP()">
+        VERIFY &amp; LOGIN
+      </button>
+
+      <div class="timer-row">
+        <span>⏱ OTP expires in: <span id="timer-display">2:00</span></span>
+        <button class="resend-btn" id="resend-btn" onclick="resendOTP()">Resend OTP</button>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div id="success-panel">
+      <div class="success-icon">✅</div>
+      <div class="success-text">ACCESS GRANTED</div>
+      <div class="success-sub">Redirecting to dashboard...</div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="status-dot"></span> SYSTEM ONLINE</span>
+    <span><span class="status-dot"></span> ENCRYPTION ACTIVE</span>
+    <span><span class="status-dot"></span> MONITORING READY</span>
+  </div>
+</div>
+
+<script>
+  let userEmail = "";
+  let timerInterval = null;
+  let timerSeconds = 120;
+
+  // OTP digit inputs - auto-advance
+  document.querySelectorAll(".otp-digit").forEach((input, i, inputs) => {
+    input.addEventListener("input", e => {
+      const val = e.target.value.replace(/\D/g, "");
+      e.target.value = val;
+      if (val && i < inputs.length - 1) inputs[i + 1].focus();
+    });
+    input.addEventListener("keydown", e => {
+      if (e.key === "Backspace" && !input.value && i > 0) inputs[i - 1].focus();
+    });
+    input.addEventListener("paste", e => {
+      e.preventDefault();
+      const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "");
+      [...pasted.slice(0, 6)].forEach((ch, j) => {
+        if (inputs[j]) inputs[j].value = ch;
+      });
+      inputs[Math.min(pasted.length, 5)].focus();
+    });
+  });
+
+  function showAlert(box, msg, type) {
+    box.className = `alert ${type}`;
+    box.textContent = msg;
+  }
+
+  function setLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.classList.toggle("btn-loading", loading);
+  }
+
+  async function requestOTP() {
+    const email = document.getElementById("email-input").value.trim();
+    const password = document.getElementById("pass-input").value;
+    const alertBox = document.getElementById("alert-box");
+    const btn = document.getElementById("send-otp-btn");
+
+    if (!email || !password) {
+      showAlert(alertBox, "Please enter email and password.", "error");
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      const resp = await fetch("/api/auth/request-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(alertBox, data.error || "Authentication failed.", "error");
+        setLoading(btn, false);
+        return;
+      }
+
+      userEmail = email;
+      document.getElementById("otp-subtitle").textContent = `> OTP SENT TO ${email.toUpperCase()}`;
+
+      // Show dev OTP if email failed
+      if (data.dev_otp) {
+        document.getElementById("otp-alert-box").className = "alert success";
+        document.getElementById("otp-alert-box").textContent = `[DEV MODE] OTP: ${data.dev_otp}`;
+      }
+
+      switchToOTP();
+    } catch {
+      showAlert(alertBox, "Server error. Please try again.", "error");
+      setLoading(btn, false);
+    }
+  }
+
+  function switchToOTP() {
+    document.getElementById("creds-panel").style.display = "none";
+    document.getElementById("otp-panel").style.display = "block";
+    document.getElementById("step1").classList.add("done");
+    document.getElementById("step2").classList.add("active");
+    document.getElementById("step-label-text").textContent = "STEP 2 / 2";
+    document.querySelectorAll(".otp-digit")[0].focus();
+    startTimer();
+  }
+
+  function startTimer() {
+    timerSeconds = 120;
+    clearInterval(timerInterval);
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      updateTimerDisplay();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        document.getElementById("resend-btn").style.display = "inline";
+        document.getElementById("timer-display").textContent = "EXPIRED";
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const m = Math.floor(timerSeconds / 60);
+    const s = timerSeconds % 60;
+    const display = document.getElementById("timer-display");
+    display.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+    display.className = timerSeconds <= 30 ? "expiring" : "";
+  }
+
+  async function resendOTP() {
+    document.getElementById("resend-btn").style.display = "none";
+    document.getElementById("creds-panel").style.display = "block";
+    document.getElementById("otp-panel").style.display = "none";
+  }
+
+  async function verifyOTP() {
+    const digits = [...document.querySelectorAll(".otp-digit")].map(i => i.value).join("");
+    const alertBox = document.getElementById("otp-alert-box");
+    const btn = document.getElementById("verify-btn");
+
+    if (digits.length < 6) {
+      showAlert(alertBox, "Please enter the 6-digit OTP.", "error");
+      return;
+    }
+
+    setLoading(btn, true);
+
+    try {
+      const resp = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, otp: digits })
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(alertBox, data.error || "Verification failed.", "error");
+        setLoading(btn, false);
+        return;
+      }
+
+      clearInterval(timerInterval);
+      document.getElementById("otp-panel").style.display = "none";
+      document.getElementById("success-panel").style.display = "block";
+
+      setTimeout(() => { window.location.href = data.redirect; }, 1500);
+    } catch {
+      showAlert(alertBox, "Server error. Please try again.", "error");
+      setLoading(btn, false);
+    }
+  }
+
+  // Enter key support
+  document.getElementById("pass-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") requestOTP();
+  });
+</script>
+</body>
+</html>
