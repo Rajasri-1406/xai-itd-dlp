@@ -1,8 +1,8 @@
 """
 XAI-ITD-DLP — Background Monitoring Agent v2
-Blocks: PrintScreen, Screenshots, USB
+Blocks: Ctrl+C, Ctrl+X, Ctrl+V, PrintScreen, Screenshots, USB
 Monitors: File access, Active window, Heartbeat, Camera processes
-NOTE: Ctrl+C / Ctrl+X / Ctrl+V are NOT blocked (copy/paste allowed)
+New: USB alert popup, Camera/phone photo detection, stronger enforcement
 """
 
 import time
@@ -40,7 +40,7 @@ except ImportError:
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SERVER_URL = "http://127.0.0.1:5000"
-HEARTBEAT_INTERVAL       = 5
+HEARTBEAT_INTERVAL      = 5
 CLIPBOARD_CLEAR_INTERVAL = 2
 SENSITIVE_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".txt", ".pptx",
                         ".py", ".db", ".json", ".xml"}
@@ -52,21 +52,21 @@ MONITORED_PATHS = [
 
 # Camera/phone-photography related processes to block
 CAMERA_PROCESSES = [
-    "WindowsCamera.exe",
+    "WindowsCamera.exe",    # Windows Camera app
     "camera.exe",
     "Camera.exe",
-    "iriun.exe",
-    "DroidCam.exe",
-    "EpocCam.exe",
-    "iVCam.exe",
+    "iriun.exe",            # Iriun Webcam (phone as webcam)
+    "DroidCam.exe",         # DroidCam (phone as webcam)
+    "EpocCam.exe",          # EpocCam
+    "iVCam.exe",            # iVCam
     "NDIWebcam.exe",
     "ManyCam.exe",
     "XSplit.exe",
-    "OBS.exe",
+    "OBS.exe",              # OBS Studio (screen/camera recording)
     "obs64.exe",
     "Bandicam.exe",
     "Fraps.exe",
-    "ShareX.exe",
+    "ShareX.exe",           # ShareX screen capture
     "Greenshot.exe",
     "LightShot.exe",
 ]
@@ -104,13 +104,17 @@ def report(event_type, detail, risk="LOW", blocked=False):
         pass
 
 
-# ── POPUP ALERT ───────────────────────────────────────────────────────────────
+# ── POPUP ALERT (visible on screen) ──────────────────────────────────────────
 def show_alert_popup(title, message):
+    """Show a Windows message box on screen so employee sees the block reason."""
     if WINDOWS:
         try:
+            # MB_ICONERROR | MB_SYSTEMMODAL (always on top, must click OK)
             ctypes.windll.user32.MessageBoxW(
-                0, message, title,
-                0x00000010 | 0x00001000
+                0,
+                message,
+                title,
+                0x00000010 | 0x00001000  # MB_ICONERROR | MB_SYSTEMMODAL
             )
         except Exception:
             pass
@@ -119,6 +123,7 @@ def show_alert_popup(title, message):
 
 
 def show_alert_nonblocking(title, message):
+    """Show alert popup in background thread so agent doesn't pause."""
     threading.Thread(
         target=show_alert_popup,
         args=(title, message),
@@ -148,7 +153,6 @@ def clear_clipboard():
 
 
 def clipboard_watcher_loop():
-    """Clears only screenshot bitmaps from clipboard. Text copy/paste is fully allowed."""
     while RUNNING:
         time.sleep(CLIPBOARD_CLEAR_INTERVAL)
         if not WINDOWS:
@@ -156,16 +160,24 @@ def clipboard_watcher_loop():
         try:
             win32clipboard.OpenClipboard()
             has_bitmap = win32clipboard.IsClipboardFormatAvailable(win32con.CF_DIB)
+            has_text   = (
+                win32clipboard.IsClipboardFormatAvailable(win32con.CF_TEXT) or
+                win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT)
+            )
+            win32clipboard.EmptyClipboard()
             win32clipboard.CloseClipboard()
 
             if has_bitmap:
-                win32clipboard.OpenClipboard()
-                win32clipboard.EmptyClipboard()
-                win32clipboard.CloseClipboard()
                 report("SCREENSHOT_BLOCKED",
                        "Screenshot bitmap in clipboard — cleared.",
                        risk="HIGH", blocked=True)
                 print("[AGENT] ⊘ SCREENSHOT BLOCKED — clipboard cleared")
+
+            elif has_text:
+                report("CLIPBOARD_BLOCKED",
+                       "Clipboard text detected and cleared.",
+                       risk="HIGH", blocked=True)
+                print("[AGENT] ⊘ CLIPBOARD BLOCKED — cleared")
 
         except Exception:
             try:
@@ -174,12 +186,19 @@ def clipboard_watcher_loop():
                 pass
 
 
-# ── KEYBOARD BLOCKER — PrintScreen ONLY ──────────────────────────────────────
-# Ctrl+C, Ctrl+V, Ctrl+X are intentionally NOT in BLOCK_COMBOS
+# ── KEYBOARD BLOCKER ──────────────────────────────────────────────────────────
 pressed_keys = set()
 
-BLOCK_KEYS   = {keyboard.Key.print_screen} if PYNPUT else set()
-BLOCK_COMBOS = []   # Empty — no key combos blocked
+BLOCK_KEYS = {keyboard.Key.print_screen} if PYNPUT else set()
+
+BLOCK_COMBOS = [
+    {keyboard.Key.ctrl_l, keyboard.KeyCode.from_char('c')},
+    {keyboard.Key.ctrl_r, keyboard.KeyCode.from_char('c')},
+    {keyboard.Key.ctrl_l, keyboard.KeyCode.from_char('x')},
+    {keyboard.Key.ctrl_r, keyboard.KeyCode.from_char('x')},
+    {keyboard.Key.ctrl_l, keyboard.KeyCode.from_char('v')},
+    {keyboard.Key.ctrl_r, keyboard.KeyCode.from_char('v')},
+] if PYNPUT else []
 
 
 def get_normalized(key):
@@ -195,7 +214,6 @@ def on_press(key):
     norm = get_normalized(key)
     pressed_keys.add(norm)
 
-    # Only block PrintScreen
     if key == keyboard.Key.print_screen:
         clear_clipboard()
         report("SCREENSHOT_BLOCKED", "PrintScreen BLOCKED.", risk="HIGH", blocked=True)
@@ -205,7 +223,20 @@ def on_press(key):
             "⊘ SCREENSHOT BLOCKED\n\nTaking screenshots is prohibited under company security policy.\nThis attempt has been logged and reported."
         )
         return False
-    # Ctrl+C, Ctrl+V, Ctrl+X — fully allowed, no action taken
+
+    current = set(pressed_keys)
+    for combo in BLOCK_COMBOS:
+        if combo.issubset(current):
+            clear_clipboard()
+            if keyboard.KeyCode.from_char('c') in combo:
+                label, msg = "COPY_BLOCKED",  "Ctrl+C (Copy) BLOCKED."
+            elif keyboard.KeyCode.from_char('x') in combo:
+                label, msg = "CUT_BLOCKED",   "Ctrl+X (Cut) BLOCKED."
+            else:
+                label, msg = "PASTE_BLOCKED", "Ctrl+V (Paste) BLOCKED."
+            report(label, msg, risk="HIGH", blocked=True)
+            print(f"[AGENT] ⊘ {label}")
+            return False
 
 
 def on_release(key):
@@ -221,7 +252,7 @@ def start_keyboard_blocker():
         suppress=False
     )
     listener.start()
-    print("[AGENT] ✅ Keyboard monitor active — PrintScreen BLOCKED | Ctrl+C/V/X ALLOWED")
+    print("[AGENT] ✅ Keyboard blocker active — Ctrl+C/X/V, PrintScreen BLOCKED")
     return listener
 
 
@@ -246,10 +277,25 @@ def win_snip_blocker_loop():
                 pass
 
 
-# ── CAMERA APP BLOCKER ────────────────────────────────────────────────────────
+# ── CAMERA APP BLOCKER ───────────────────────────────────────────────────────
+# Kills any screen recording / phone-as-webcam app running on the PC
+
 _camera_warned_procs = set()
 
 def camera_blocker_loop():
+    """
+    Kill any external camera app or screen-recording process.
+
+    This runs ALWAYS (not just when a file is open).
+    Blocks: Windows Camera, OBS, DroidCam, ShareX, Bandicam, etc.
+
+    NOTE: This does NOT interfere with the agent's own OpenCV webcam capture
+    (phone_detection_loop) — OpenCV uses the raw DirectShow API, not a
+    separate camera process, so cv2.VideoCapture is invisible to psutil.
+
+    If a camera app is blocked WHILE a file is open → also write phone flag
+    so the browser closes the file immediately.
+    """
     global _camera_warned_procs
     print("[AGENT] ✅ Camera/Recording app blocker active")
     while RUNNING:
@@ -261,18 +307,54 @@ def camera_blocker_loop():
                     pid = proc.info['pid']
                     if pid not in _camera_warned_procs:
                         _camera_warned_procs.add(pid)
-                        proc.kill()
-                        report("CAMERA_BLOCKED",
-                               f"Camera/recording app blocked: {pname}",
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+                        report("CAMERA_APP_BLOCKED",
+                               f"Camera/recording app blocked and killed: {pname}",
                                risk="HIGH", blocked=True)
-                        print(f"[AGENT] ⊘ CAMERA BLOCKED: {pname}")
-                        show_alert_nonblocking(
-                            "XAI-ITD-DLP Security — Camera Blocked",
-                            f"⊘ CAMERA ACCESS BLOCKED\n\n{pname} has been terminated.\n\n"
-                            "Using cameras or recording software while viewing\n"
-                            "company documents is prohibited.\n\n"
-                            "This incident has been logged and reported to your manager."
-                        )
+                        print(f"[AGENT] ⊘ CAMERA APP BLOCKED: {pname}")
+
+                        # If employee currently has a file open → also flag as
+                        # phone/recording threat so browser closes the file
+                        try:
+                            r = requests.get(
+                                f"{SERVER_URL}/api/agent/file-viewing-status",
+                                params={"token": SESSION_TOKEN, "email": USER_EMAIL},
+                                timeout=2
+                            )
+                            if r.status_code == 200 and r.json().get("active", False):
+                                _write_phone_flag()
+                                show_alert_nonblocking(
+                                    "XAI-ITD-DLP Security — Recording App Blocked",
+                                    f"⊘ CAMERA APP BLOCKED\n\n"
+                                    f"{pname} was detected and terminated.\n\n"
+                                    "Camera and recording apps are prohibited while\n"
+                                    "company documents are open.\n\n"
+                                    "All files have been closed automatically.\n"
+                                    "This incident has been logged and reported to your manager."
+                                )
+                            else:
+                                # File not open — just show standard block notice
+                                show_alert_nonblocking(
+                                    "XAI-ITD-DLP Security — Camera App Blocked",
+                                    f"⊘ CAMERA APP BLOCKED\n\n"
+                                    f"{pname} has been terminated.\n\n"
+                                    "Camera and recording software are not permitted\n"
+                                    "on company workstations under the DLP policy.\n\n"
+                                    "This incident has been logged and reported to your manager."
+                                )
+                        except Exception:
+                            # Can't reach server — show generic popup
+                            show_alert_nonblocking(
+                                "XAI-ITD-DLP Security — Camera App Blocked",
+                                f"⊘ CAMERA APP BLOCKED\n\n"
+                                f"{pname} has been terminated.\n\n"
+                                "Camera and recording software are not permitted\n"
+                                "on company workstations under the DLP policy.\n\n"
+                                "This incident has been logged and reported to your manager."
+                            )
             except Exception:
                 pass
         _camera_warned_procs = {p for p in _camera_warned_procs
@@ -280,21 +362,44 @@ def camera_blocker_loop():
 
 
 # ── PHONE DETECTION via OpenCV webcam ────────────────────────────────────────
+# How it works:
+#   1. Browser calls /api/agent/file-viewing (active=true) when employee opens file
+#   2. Agent polls that endpoint every second to check if file is open
+#   3. When file is open → webcam turns ON → OpenCV scans for face/phone
+#   4. If phone/person detected near screen → write flag file
+#   5. Browser polls /api/agent/phone-status every 2s → sees flag → closes file
+
 import cv2
 
+# Face detector
 _face_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 )
+# Upper body detector — detects person holding phone toward screen
 _upper_body_cascade = cv2.CascadeClassifier(
     cv2.data.haarcascades + 'haarcascade_upperbody.xml'
 )
 
-_phone_cooldown = 0
-_face_history   = []
-_HISTORY_SIZE   = 6
+_phone_cooldown = 0   # prevent alert spam
 
+
+# Track face history for disappearance detection
+_face_history = []
+_HISTORY_SIZE = 8   # check last 4 seconds (8 x 0.5s)
 
 def detect_phone_in_frame(frame):
+    """
+    Smart face-based phone detection.
+    
+    Logic:
+    - Employee normally sits with face visible (Faces=1)
+    - When they hold phone to record, they often look at their phone
+      screen = face turns away = Faces drops to 0
+    - If face was consistently detected before and suddenly disappears
+      = suspicious = ALERT
+    - If 2+ faces appear = someone else brought phone near screen = ALERT
+    - Faces=1 steady = normal working = SAFE
+    """
     global _face_history
 
     gray  = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -303,26 +408,34 @@ def detect_phone_in_frame(frame):
     )
     f = len(faces)
 
+    # Keep history of last N frames
     _face_history.append(f)
     if len(_face_history) > _HISTORY_SIZE:
         _face_history.pop(0)
 
+    # Not enough history yet — wait
     if len(_face_history) < _HISTORY_SIZE:
         return False, ""
 
     recent   = _face_history[-_HISTORY_SIZE:]
     avg_prev = sum(recent[:-2]) / max(len(recent[:-2]), 1)
 
+    # Rule 1 — 2 or more faces = someone holding phone near screen
     if f >= 2:
         return True, f"Multiple persons detected near screen ({f} faces)"
 
-    if avg_prev >= 0.7 and f == 0:
-        return True, "Employee face disappeared suddenly — possible phone recording"
+    # Rule 2 — Face was consistently present before, now suddenly gone
+    # Require: face was stable for at least 4 of last 6 frames (avg >= 0.65)
+    # AND face has been gone for the last 2 consecutive frames (not just 1)
+    # This prevents false positives from: leaning forward, poor lighting, brief occlusion
+    last_two_gone = (len(recent) >= 2 and recent[-1] == 0 and recent[-2] == 0)
+    if avg_prev >= 0.65 and last_two_gone:
+        return True, "Employee face disappeared — possible phone recording attempt"
 
     return False, ""
 
-
 def _is_file_open():
+    """Ask Flask server if employee currently has a file open."""
     try:
         r = requests.get(
             f"{SERVER_URL}/api/agent/file-viewing-status",
@@ -339,6 +452,7 @@ def _is_file_open():
 
 
 def _write_phone_flag():
+    """Write flag file so Flask knows to tell browser to close file."""
     try:
         safe_email = (USER_EMAIL or "unknown").replace("@", "_").replace(".", "_")
         flag_path  = os.path.join(
@@ -355,9 +469,10 @@ def _write_phone_flag():
 _push_counter = 0
 
 def _push_frame(frame):
+    """Encode frame as JPEG and push to Flask for browser camera overlay."""
     global _push_counter
     _push_counter += 1
-    if _push_counter % 3 != 0:
+    if _push_counter % 3 != 0:   # every 3rd frame = ~5fps
         return
     if not SESSION_TOKEN:
         return
@@ -377,6 +492,13 @@ def _push_frame(frame):
 
 
 def phone_detection_loop():
+    """
+    Main phone detection loop.
+    - Webcam is OFF when no file is open (saves CPU + battery)
+    - Webcam turns ON automatically when employee opens a file
+    - OpenCV checks every 0.5s for face/phone near screen
+    - If detected: flag file written, browser closes the file
+    """
     global _phone_cooldown
 
     print("[AGENT] ✅ Phone detection active — webcam starts when file is opened")
@@ -387,21 +509,38 @@ def phone_detection_loop():
 
     while RUNNING:
         time.sleep(0.5)
+
         file_open = _is_file_open()
 
+        # File just opened — turn webcam ON
         if file_open and not cam_open:
             try:
-                cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-                if cap.isOpened():
+                # Try index 0 first, then 1 (some systems have virtual cam at 0)
+                cap = None
+                for cam_idx in [0, 1, 2]:
+                    _cap = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
+                    if _cap.isOpened():
+                        cap = _cap
+                        print(f"[AGENT] 📷 Webcam ON (index {cam_idx}) — monitoring for phone/recording")
+                        break
+                    else:
+                        _cap.release()
+
+                if cap and cap.isOpened():
                     cam_open = True
-                    print("[AGENT] 📷 Webcam ON — monitoring for phone recording")
-                    report("WEBCAM_STARTED", "Webcam monitoring started — employee opened a file.", risk="LOW")
+                    report("WEBCAM_STARTED",
+                           "Webcam monitoring started — employee opened a file.",
+                           risk="LOW")
                 else:
-                    print("[AGENT] ⚠ Could not open webcam (index 0)")
+                    print("[AGENT] ⚠ Could not open any webcam — phone detection unavailable")
+                    print("[AGENT]   Make sure a webcam is connected and not in use by another app")
                     cap = None
+                    # Still set cam_open=True so we don't retry every 0.5s
+                    cam_open = True   # will skip frame capture below since cap is None
             except Exception as e:
                 print(f"[AGENT] Webcam open error: {e}")
 
+        # File just closed — turn webcam OFF
         if not file_open and cam_open:
             try:
                 if cap:
@@ -409,22 +548,27 @@ def phone_detection_loop():
                     cap = None
                 cam_open = False
                 print("[AGENT] 📷 Webcam OFF — file closed")
-                report("WEBCAM_STOPPED", "Webcam monitoring stopped — file closed.", risk="LOW")
+                report("WEBCAM_STOPPED",
+                       "Webcam monitoring stopped — file closed.",
+                       risk="LOW")
             except Exception:
                 pass
 
+        # Webcam is ON — scan for phone
         if cam_open and cap:
             try:
                 ret, frame = cap.read()
                 if not ret or frame is None:
                     continue
 
+                # Push frame to Flask so browser camera overlay can display it
                 _push_frame(frame)
+
                 phone_detected, reason = detect_phone_in_frame(frame)
 
                 if phone_detected:
                     now = time.time()
-                    if now - _phone_cooldown > 10:
+                    if now - _phone_cooldown > 10:   # 10s cooldown between alerts
                         _phone_cooldown = now
                         print(f"[AGENT] ⊘ PHONE DETECTED: {reason}")
                         report("PHONE_DETECTED",
@@ -439,11 +583,13 @@ def phone_detection_loop():
                             "The file has been closed automatically.\n"
                             "This incident has been logged and reported to your manager."
                         )
+
             except Exception as e:
                 print(f"[AGENT] Detection error: {e}")
 
         was_file_open = file_open
 
+    # Cleanup on exit
     if cap:
         cap.release()
 
@@ -480,6 +626,7 @@ def usb_monitor_loop():
         try:
             current = get_removable_drives()
             for drive in current - known_drives:
+                # Show popup FIRST so employee sees it immediately
                 show_alert_nonblocking(
                     "XAI-ITD-DLP Security — USB BLOCKED",
                     f"⊘ USB PORT IS BLOCKED\n\nDrive: {drive}\n\n"
@@ -582,15 +729,15 @@ def start_agent(email, token, name="Employee"):
     print("=" * 60)
     print(f"  XAI-ITD-DLP Monitoring Agent — {name}")
     print("=" * 60)
-    print("  ALLOWED  : Ctrl+C, Ctrl+V, Ctrl+X  ← copy/paste enabled")
-    print("  BLOCKED  : PrintScreen, Snipping Tool, Screenshots")
-    print("  BLOCKED  : USB ports")
-    print("  BLOCKED  : Camera apps, Phone-as-webcam, OBS, ShareX etc.")
-    print("  DETECTED : Phone near screen (OpenCV)")
-    print("  MONITORED: Files, Active window, Clipboard bitmaps, Heartbeat")
+    print("  BLOCKED  : Ctrl+C, Ctrl+X, Ctrl+V, PrintScreen")
+    print("  BLOCKED  : Screenshots, Snipping Tool, USB ports")
+    print("  BLOCKED  : Camera apps, Phone-as-webcam apps")
+    print("  BLOCKED  : OBS, ShareX, Bandicam, ManyCam, etc.")
+    print("  DETECTED : Phone near screen (OpenCV — active when file open)")
+    print("  MONITORED: Files, Windows, Clipboard, Heartbeat")
     print("=" * 60 + "\n")
 
-    report("AGENT_STARTED", f"Monitoring agent started for {name}.", risk="LOW")
+    report("AGENT_STARTED", f"Monitoring agent v3 started for {name}.", risk="LOW")
 
     threads = [
         threading.Thread(target=usb_monitor_loop,       daemon=True),
@@ -599,7 +746,7 @@ def start_agent(email, token, name="Employee"):
         threading.Thread(target=heartbeat_loop,          daemon=True),
         threading.Thread(target=win_snip_blocker_loop,   daemon=True),
         threading.Thread(target=camera_blocker_loop,     daemon=True),
-        threading.Thread(target=phone_detection_loop,    daemon=True),
+        threading.Thread(target=phone_detection_loop,    daemon=True),  # NEW
     ]
     for t in threads:
         t.start()
@@ -607,6 +754,7 @@ def start_agent(email, token, name="Employee"):
     kb_listener = start_keyboard_blocker()
     observer    = start_file_monitor()
 
+    # Keep running until RUNNING is set to False externally (by launcher on new login)
     try:
         while RUNNING:
             time.sleep(1)

@@ -31,9 +31,8 @@ def read_token_file():
         email = s.get("email", "").strip()
         token = s.get("token", "").strip()
         name  = s.get("name", "Employee").strip()
-        role  = s.get("role", "employee").strip()
         if email and token:
-            return email, token, name, role
+            return email, token, name
     except Exception:
         pass
     return None
@@ -47,7 +46,7 @@ def wait_for_token():
         if os.path.exists(TOKEN_FILE):
             result = read_token_file()
             if result:
-                return result  # (email, token, name, role)
+                return result
         time.sleep(1)
         waited += 1
         if waited % 10 == 0:
@@ -75,17 +74,17 @@ def main():
 
     while True:
         # Wait for a valid session token file
-        email, token, name, role = wait_for_token()
+        email, token, name = wait_for_token()
         current_mtime = get_mtime()
 
-        print(f"[LAUNCHER] Session found for: {name} ({email}) — role: {role}")
+        print(f"[LAUNCHER] Session found for: {name} ({email})")
         print("[LAUNCHER] Starting monitoring agent...\n")
 
         # Start agent in a background thread so we can watch for token changes
         monitor.RUNNING = True
         agent_thread = threading.Thread(
             target=monitor.start_agent,
-            args=(email, token, name, role),
+            args=(email, token, name),
             daemon=True
         )
         agent_thread.start()
@@ -113,7 +112,7 @@ def main():
                 monitor.RUNNING = True
                 agent_thread = threading.Thread(
                     target=monitor.start_agent,
-                    args=(email, token, name, role),
+                    args=(email, token, name),
                     daemon=True
                 )
                 agent_thread.start()

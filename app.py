@@ -297,12 +297,17 @@ def request_otp():
     if not email or not password:
         return jsonify({"error": "Email and password required."}), 400
 
+    selected_role = data.get("role", "").strip().lower()
+
     user = get_user_by_email(email)
     if not user or not verify_password(password, user["password"]):
         return jsonify({"error": "Invalid credentials."}), 401
 
     if not user.get("is_active", True):
         return jsonify({"error": "Account is deactivated. Contact administrator."}), 403
+
+    if selected_role and user.get("role", "") != selected_role:
+        return jsonify({"error": "Role mismatch. Your account is not registered as " + selected_role + "."}), 403
 
     ip = request.remote_addr
     location = get_location_from_ip(ip)
@@ -1610,6 +1615,11 @@ def employee_travel_status():
 @login_required(roles=["employee"])
 def employee_travel_history():
     history = get_travel_history(request.auth_email)
+    for entry in history:
+        for k in ("requested_at", "approved_at", "start_date", "end_date"):
+            v = entry.get(k)
+            if hasattr(v, "strftime"):
+                entry[k] = v.strftime("%Y-%m-%d %H:%M")
     return jsonify(history)
 
 
@@ -2574,14 +2584,27 @@ def run_dlp_checks(filepath, filename):
 def mail_send():
     sender_email = request.auth_email
     sender_role  = request.auth_role
-    data         = request.json or {}
 
-    to_raw       = data.get('to', [])
-    subject      = data.get('subject', '').strip()
-    body         = data.get('body', '').strip()
-    thread_id    = data.get('thread_id', None)
-    reply_to_id  = data.get('reply_to_id', None)
-    is_forward   = data.get('is_forward', False)
+    # Parse: multipart/form-data (vfs_files attached) or plain JSON
+    is_multipart = request.content_type and 'multipart/form-data' in request.content_type
+    if is_multipart:
+        import json as _json
+        to_raw      = _json.loads(request.form.get('to', '[]'))
+        subject     = request.form.get('subject', '').strip()
+        body        = request.form.get('body', '').strip()
+        thread_id   = request.form.get('thread_id', None)
+        reply_to_id = request.form.get('reply_to_id', None)
+        is_forward  = request.form.get('is_forward', 'false').lower() == 'true'
+        vfs_files   = _json.loads(request.form.get('vfs_files', '[]'))
+    else:
+        data        = request.json or {}
+        to_raw      = data.get('to', [])
+        subject     = data.get('subject', '').strip()
+        body        = data.get('body', '').strip()
+        thread_id   = data.get('thread_id', None)
+        reply_to_id = data.get('reply_to_id', None)
+        is_forward  = data.get('is_forward', False)
+        vfs_files   = []
 
     if not to_raw or not subject or not body:
         return jsonify({'success': False, 'error': 'Missing required fields: to, subject, body'}), 400
@@ -2619,6 +2642,32 @@ def mail_send():
                            'Sensitive keywords in mail: ' + ", ".join(found_kw),
                            '-', '-', blocked=False)
 
+    # Resolve VFS file attachments — files already on server, referenced by fid
+    if len(vfs_files) > 3:
+        return jsonify({'success': False, 'error': 'Max 3 attachments allowed'}), 400
+
+    attachments_meta = []
+    for vf in vfs_files:
+        fid  = str(vf.get('fid', ''))
+        name = vf.get('name', 'unknown')
+        if not fid:
+            continue
+        rec = get_file_by_id_unrestricted(fid)
+        if not rec:
+            return jsonify({'success': False, 'error': 'File not found in Files: ' + name}), 404
+        # Grant recipients read access to this file
+        _mail_db['files'].update_one(
+            {'_id': rec['_id']},
+            {'$addToSet': {'allowed_emails': {'$each': to_list}}}
+        )
+        attachments_meta.append({
+            'file_id':       fid,
+            'original_name': rec.get('original_name', name),
+            'file_size':     rec.get('file_size', 0),
+            'file_type':     rec.get('file_type', 'application/octet-stream'),
+            'source':        'files'
+        })
+
     now    = datetime.utcnow()
     msg_id = secrets.token_hex(16)
     if not thread_id:
@@ -2633,6 +2682,7 @@ def mail_send():
         'to':           to_list,
         'subject':      subject,
         'body':         body,
+        'attachments':  attachments_meta,
         'sent_at':      now,
         'read_by':      [],
         'starred_by':   [],
@@ -2640,30 +2690,65 @@ def mail_send():
         'sensitive':    bool(found_kw),
     })
 
-    sender_user = get_user_by_email(sender_email)
-    sender_name = sender_user.get('name', sender_email) if sender_user else sender_email
+    sender_user  = get_user_by_email(sender_email)
+    sender_name  = sender_user.get('name', sender_email) if sender_user else sender_email
+    attach_count = len(attachments_meta)
+
     for recipient in to_list:
         if recipient == sender_email.lower():
             continue
         emit_to_user(recipient, 'new_mail', {
-            'msg_id':     msg_id,
-            'thread_id':  thread_id,
-            'from_email': sender_email,
-            'from_name':  sender_name,
-            'subject':    subject,
-            'preview':    body[:120] + ('...' if len(body) > 120 else ''),
-            'sent_at':    now.strftime('%Y-%m-%d %H:%M'),
+            'msg_id':         msg_id,
+            'thread_id':      thread_id,
+            'from_email':     sender_email,
+            'from_name':      sender_name,
+            'subject':        subject,
+            'preview':        body[:120] + ('...' if len(body) > 120 else ''),
+            'sent_at':        now.strftime('%Y-%m-%d %H:%M'),
+            'has_attachment': attach_count > 0,
         })
 
+    attach_info = (' with ' + str(attach_count) + ' attachment(s)') if attach_count else ''
     log_activity(sender_email, 'EMAIL_SENT',
-                 'Internal mail -> ' + ", ".join(to_list) + ' | Subject: ' + subject[:60],
+                 'Internal mail' + attach_info + ' -> ' + ", ".join(to_list) + ' | Subject: ' + subject[:60],
                  '-', '-', 'LOW')
     log_security_event(sender_email, 'EMAIL_SENT',
-                       'Sent to ' + str(len(to_list)) + ' recipient(s)', '-', '-', blocked=False)
+                       'Sent to ' + str(len(to_list)) + ' recipient(s)' + attach_info, '-', '-', blocked=False)
 
-    return jsonify({'success': True,
-                    'message': 'Message sent to ' + str(len(to_list)) + ' recipient(s)',
-                    'msg_id': msg_id, 'thread_id': thread_id}), 200
+    return jsonify({
+        'success':     True,
+        'message':     'Message sent to ' + str(len(to_list)) + ' recipient(s)' + attach_info,
+        'msg_id':      msg_id,
+        'thread_id':   thread_id,
+        'attachments': attachments_meta
+    }), 200
+
+
+@app.route('/api/mail/attachment/<file_id>', methods=['GET'])
+@login_required(roles=['employee', 'manager'])
+def mail_get_attachment(file_id):
+    """Download a mail attachment — only accessible to sender / recipients."""
+    from flask import send_file as _send_file
+    email = request.auth_email.lower()
+    rec   = get_file_by_id_unrestricted(file_id)
+    if not rec:
+        return jsonify({'error': 'Attachment not found'}), 404
+    allowed = (
+        rec.get('uploaded_by', '').lower() == email or
+        email in [e.lower() for e in rec.get('allowed_emails', [])] or
+        rec.get('visibility') == 'public'
+    )
+    if not allowed:
+        return jsonify({'error': 'Access denied'}), 403
+    filepath = os.path.join(UPLOAD_FOLDER, rec['filename'])
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found on disk'}), 404
+    return _send_file(
+        filepath,
+        mimetype      = rec.get('file_type', 'application/octet-stream'),
+        as_attachment = True,
+        download_name = rec.get('original_name', rec['filename'])
+    )
 
 
 def _fmt_msg(d, viewer_email):
@@ -2680,6 +2765,7 @@ def _fmt_msg(d, viewer_email):
         'read':         viewer_email in d.get('read_by', []),
         'starred':      viewer_email in d.get('starred_by', []),
         'sensitive':    d.get('sensitive', False),
+        'attachments':  d.get('attachments', []),
     }
 
 
@@ -2944,3 +3030,5 @@ if __name__ == "__main__":
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    
+    

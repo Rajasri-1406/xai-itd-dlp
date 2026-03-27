@@ -13,54 +13,53 @@
 
 <style>
   :root {
-    --green:#00ff88; --red:#ff3366; --yellow:#ffcc00;
-    --blue:#0088ff; --orange:#ff8800;
-    --bg:#050508; --surface:#0d0d15; --surface2:#12121e;
-    --border:#1a1a2e; --text:#c8d6e5; --muted:#4a5568;
+    --green:#0f9e6e; --red:#e0253a; --yellow:#e08a00;
+    --blue:#1a6fef; --orange:#ff8800;
+    --bg:#eef2ff; --surface:#ffffff; --surface2:#f5f7ff;
+    --border:#dde3f5; --text:#1a2340; --muted:#6b7fa8;
     --sb:248px; --tb:56px;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;}
   body::before{content:'';position:fixed;inset:0;
-    background-image:linear-gradient(rgba(0,255,136,0.02) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(0,255,136,0.02) 1px,transparent 1px);
+    background-image:none;
     background-size:40px 40px;pointer-events:none;z-index:0;}
 
   /* ── TOPBAR ── */
-  .topbar-dlp{position:fixed;top:0;left:0;right:0;height:var(--tb);background:rgba(5,5,8,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;z-index:1100;gap:10px;backdrop-filter:blur(10px);}
-  .topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--green);letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
+  .topbar-dlp{position:fixed;top:0;left:0;right:0;height:var(--tb);background:linear-gradient(135deg,#1a6fef,#1452c8,#0e3da6);border-bottom:none;display:flex;align-items:center;padding:0 18px;z-index:1100;gap:10px;backdrop-filter:blur(10px);}
+  .topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:13px;color:#ffffff;letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
   .topbar-brand-ico{width:28px;height:28px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#000;flex-shrink:0;}
-  .topbar-hburg{display:none;background:none;border:none;color:var(--muted);cursor:pointer;padding:7px;border-radius:6px;font-size:15px;}
+  .topbar-hburg{display:none;background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:7px;border-radius:6px;font-size:15px;}
   .topbar-mid{flex:1;display:flex;align-items:center;padding:0 14px;}
-  .topbar-bc{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:5px;}
-  .topbar-bc .bc-cur{color:var(--green);}
+  .topbar-bc{font-size:11px;color:rgba(255,255,255,0.7);font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:5px;}
+  .topbar-bc .bc-cur{color:#ffffff;}
   .topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-  .topbar-ib{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 9px;border-radius:6px;font-size:13px;transition:all .15s;}
-  .topbar-ib:hover{background:rgba(0,255,136,0.06);color:var(--green);}
-  .topbar-uchip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;background:var(--surface);border:1px solid var(--border);border-radius:100px;}
+  .topbar-ib{background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:6px 9px;border-radius:6px;font-size:13px;transition:all .15s;}
+  .topbar-ib:hover{background:rgba(255,255,255,0.15);color:#ffffff;}
+  .topbar-uchip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:100px;}
   .topbar-ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--green));color:#000;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
-  .topbar-uname{font-size:11px;font-weight:600;color:var(--text);}
-  .topbar-urole{font-size:9px;color:var(--blue);}
-  .live-indicator{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--green);letter-spacing:2px;}
+  .topbar-uname{font-size:11px;font-weight:600;color:#ffffff;}
+  .topbar-urole{font-size:9px;color:rgba(255,255,255,0.75);}
+  .live-indicator{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:11px;color:#ffffff;letter-spacing:2px;}
   .live-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:blink 1s infinite;box-shadow:0 0 8px var(--green);}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
 
   /* ── SIDEBAR ── */
-  .sidebar-dlp{position:fixed;left:0;top:var(--tb);bottom:0;width:var(--sb);background:rgba(8,8,14,0.98);border-right:1px solid var(--border);overflow-y:auto;z-index:1000;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);}
+  .sidebar-dlp{position:fixed;left:0;top:var(--tb);bottom:0;width:var(--sb);background:#ffffff;border-right:1px solid var(--border);box-shadow:2px 0 12px rgba(26,111,239,0.07);overflow-y:auto;z-index:1000;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);}
   .sidebar-dlp.hidden{transform:translateX(-100%);}
   .sidebar-dlp::-webkit-scrollbar{width:3px;}
   .sidebar-dlp::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
   .slabel-dlp{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:'Share Tech Mono',monospace;padding:14px 16px 5px;}
   .nav-item-dlp{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 8px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .13s;position:relative;user-select:none;font-family:'Rajdhani',sans-serif;}
   .nav-item-dlp i{width:16px;text-align:center;font-size:12px;flex-shrink:0;}
-  .nav-item-dlp:hover{background:rgba(0,255,136,0.06);color:var(--text);}
-  .nav-item-dlp.active{background:rgba(0,255,136,0.1);color:var(--green);font-weight:700;}
-  .nav-item-dlp.active::before{content:'';position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--green);border-radius:0 3px 3px 0;}
+  .nav-item-dlp:hover{background:rgba(26,111,239,0.07);color:var(--text);}
+  .nav-item-dlp.active{background:rgba(26,111,239,0.12);color:#1a6fef;font-weight:700;}
+  .nav-item-dlp.active::before{content:'';position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:#1a6fef;border-radius:0 3px 3px 0;}
   .nav-badge-dlp{margin-left:auto;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:5px;font-family:'Share Tech Mono',monospace;}
   .sidebar-footer-dlp{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
   .sfcard-dlp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 13px;}
   .sfcard-lbl-dlp{font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
-  .sfcard-val-dlp{font-size:14px;font-weight:700;color:var(--green);font-family:'Share Tech Mono',monospace;margin-top:4px;display:flex;align-items:center;gap:6px;}
+  .sfcard-val-dlp{font-size:14px;font-weight:700;color:#1a6fef;font-family:'Share Tech Mono',monospace;margin-top:4px;display:flex;align-items:center;gap:6px;}
 
   /* ── MAIN CONTENT ── */
   .main-dlp{margin-left:var(--sb);margin-top:var(--tb);min-height:calc(100vh - var(--tb));padding:24px;transition:margin-left .28s;position:relative;z-index:1;}
@@ -74,7 +73,7 @@
   .section-title::after{content:'';flex:1;height:1px;background:var(--border);}
   .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
   @media(max-width:900px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(26,111,239,0.06);}
   .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
   .stat-card.green::before{background:var(--green);}.stat-card.red::before{background:var(--red);}
   .stat-card.yellow::before{background:var(--yellow);}.stat-card.blue::before{background:var(--blue);}
@@ -123,7 +122,7 @@
   .event-item.new{animation:flashIn 0.6s ease;}.event-item.high-risk{border-left:3px solid var(--red);}.event-item.blocked-ev{border-left:3px solid var(--orange);}
   @keyframes flashIn{0%{background:rgba(0,255,136,0.12);}100%{background:transparent;}}
   .ev-time{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);}
-  .ev-type{font-family:'Share Tech Mono',monospace;font-size:11px;color:#fff;background:var(--surface2);padding:3px 8px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ev-type{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--blue);background:var(--surface2);padding:3px 8px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .ev-detail{color:var(--text);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .ev-user,.ev-location{font-size:12px;color:var(--muted);}
   .risk-badge{padding:3px 10px;border-radius:4px;font-size:10px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;font-weight:bold;text-align:center;}
@@ -158,7 +157,7 @@
   .mgr-fm-tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);}
   .mgr-server-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:border-color 0.15s;}
   .mgr-server-card:hover{border-color:rgba(0,136,255,0.4);}
-  .mgr-server-card-name{font-weight:700;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mgr-server-card-name{font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mgr-server-card-meta{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);}
   .mgr-recent-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s;}
   .mgr-recent-row:hover{border-color:rgba(0,136,255,0.3);}
@@ -178,7 +177,7 @@
   .fm-search-mgr{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;width:160px;}
   .fm-search-mgr:focus{border-color:rgba(0,136,255,0.5);}
   .fm-body{display:flex;min-height:360px;}
-  .fm-sidebar-mgr{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:rgba(0,0,0,0.2);}
+  .fm-sidebar-mgr{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:var(--surface2);}
   .fm-sidebar-item-mgr{padding:7px 16px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;}
   .fm-sidebar-item-mgr:hover{background:rgba(0,136,255,0.06);color:var(--text);}
   .fm-sidebar-item-mgr.active{background:rgba(0,136,255,0.1);color:var(--blue);border-right:2px solid var(--blue);}
@@ -210,7 +209,7 @@
   .fm-list-row:hover{background:rgba(0,255,136,0.06);}
   .fm-list-row.selected{background:rgba(0,255,136,0.1);}
   .fm-list-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
-  .fm-list-name{flex:1;font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fm-list-name{flex:1;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .fm-list-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:80px;text-align:right;flex-shrink:0;}
   .fm-list-date{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:120px;text-align:right;flex-shrink:0;}
   .empty{text-align:center;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:12px;padding:32px;}
@@ -225,7 +224,7 @@
   .fm-ctx-item-mgr.danger:hover{background:rgba(255,51,102,0.1);color:var(--red);}
   .fm-ctx-sep-mgr{height:1px;background:var(--border);margin:4px 0;}
   /* Send file modal */
-  .mgr-send-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:3000;align-items:center;justify-content:center;}
+  .mgr-send-modal-bg{display:none;position:fixed;inset:0;background:rgba(26,35,64,0.55);z-index:3000;align-items:center;justify-content:center;}
   .mgr-send-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:500px;overflow:hidden;}
   .mgr-send-hdr{padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
   .mgr-send-body{padding:20px;}
@@ -236,14 +235,14 @@
   .msg-box{margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 12px;border-radius:6px;display:none;}
   .msg-box.ok{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3);display:block;}
   .msg-box.err{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.3);display:block;}
-  .leaflet-container{background:#0d0d15 !important;}
-  .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.1);}
+  .leaflet-container{background:#e8eeff !important;}
+  .leaflet-tile{filter:none;}
   .leaflet-control-zoom a{background:var(--surface2) !important;color:var(--green) !important;border-color:var(--border) !important;}
-  .leaflet-popup-content-wrapper{background:var(--surface);border:1px solid var(--green);border-radius:8px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;}
-  .leaflet-popup-tip{background:var(--surface);}
+  .leaflet-popup-content-wrapper{background:#ffffff;border:1px solid #dde3f5;border-radius:8px;color:#1a2340;font-family:'Share Tech Mono',monospace;font-size:12px;}
+  .leaflet-popup-tip{background:#ffffff;}
   .leaflet-popup-close-button{color:var(--red) !important;}
   /* ── Manager Travel Map ── */
-  #mtr-map{height:290px;width:100%;border-radius:10px;background:#0a0a14;border:1px solid var(--border);z-index:1;}
+  #mtr-map{height:290px;width:100%;border-radius:10px;background:#e8eeff;border:1px solid var(--border);z-index:1;}
   .mtr-pin-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
   .mtr-pin-box label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;}
   .mtr-pin-val{font-size:12px;font-family:'Share Tech Mono',monospace;color:var(--text);word-break:break-all;}
@@ -251,14 +250,14 @@
   .mtr-suggest-item:hover,.mtr-suggest-item.hovered{background:rgba(0,136,255,0.12);color:var(--blue);}
   .mtr-hist-row{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid rgba(26,26,46,0.6);}
   .mtr-hist-row:last-child{border-bottom:none;}
-  .mtr-hist-route{font-size:13px;font-weight:700;color:#fff;}
+  .mtr-hist-route{font-size:13px;font-weight:700;color:var(--text);}
   .mtr-hist-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap;}
   .pin-marker{background:var(--green);width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px var(--green);}
   .history-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
   .history-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface2);border-bottom:1px solid var(--border);}
   .history-select{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;}
   #toast-container{position:fixed;top:72px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:380px;}
-  .toast{background:var(--surface);border-radius:10px;padding:14px 18px;font-size:13px;animation:slideIn 0.3s ease;border-left:3px solid;}
+  .toast{background:var(--surface);border-radius:10px;padding:14px 18px;font-size:13px;animation:slideIn 0.3s ease;border-left:3px solid;box-shadow:0 4px 16px rgba(26,111,239,0.1);}
   .toast.high{border-color:var(--red);}.toast.blocked-t{border-color:var(--orange);}
   @keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
   .toast-title{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;margin-bottom:4px;}
@@ -316,15 +315,15 @@
   /* ── TRAVEL REQUESTS (manager) ── */
   .tr-req-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;transition:border-color .18s;}
   .tr-req-card:hover{border-color:rgba(0,136,255,0.3);}
-  .tr-req-card .tr-route{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px;}
+  .tr-req-card .tr-route{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;}
   .tr-req-card .tr-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;}
   .tr-req-card .tr-btns{display:flex;gap:8px;margin-top:10px;}
 
   /* ── NOTIFICATIONS PANEL ── */
-  .notif-panel{position:fixed;top:var(--tb);right:0;width:340px;max-height:calc(100vh - var(--tb));background:var(--surface);border-left:1px solid var(--border);z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,0.5);}
+  .notif-panel{position:fixed;top:var(--tb);right:0;width:340px;max-height:calc(100vh - var(--tb));background:var(--surface);border-left:1px solid var(--border);z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(26,111,239,0.12);}
   .notif-panel.open{transform:translateX(0);}
   .notif-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-  .notif-title{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);letter-spacing:2px;}
+  .notif-title{font-family:'Share Tech Mono',monospace;font-size:12px;color:#1a6fef;letter-spacing:2px;}
   .notif-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;}
   .notif-close:hover{color:var(--red);}
   .notif-list{flex:1;overflow-y:auto;padding:8px 0;}
@@ -332,8 +331,8 @@
   .notif-list::-webkit-scrollbar-thumb{background:var(--border);}
   .notif-item{padding:10px 16px;border-bottom:1px solid rgba(26,26,46,0.5);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;}
   .notif-item:hover{background:rgba(0,136,255,0.04);}
-  .notif-item.unread{background:rgba(0,255,136,0.03);}
-  .notif-item.unread::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:6px;}
+  .notif-item.unread{background:rgba(26,111,239,0.04);}
+  .notif-item.unread::before{content:'';width:6px;height:6px;border-radius:50%;background:#1a6fef;flex-shrink:0;margin-top:6px;}
   .notif-item:not(.unread)::before{content:'';width:6px;height:6px;flex-shrink:0;}
   .notif-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
   .notif-body{flex:1;min-width:0;}
@@ -350,7 +349,7 @@
 <div id="toast-container"></div>
 
 <!-- Manager File View Modal (read-only with watermark) -->
-<div id="mgr-view-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:5000;align-items:center;justify-content:center;">
+<div id="mgr-view-modal" style="display:none;position:fixed;inset:0;background:rgba(26,35,64,0.6);z-index:5000;align-items:center;justify-content:center;">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:820px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;position:relative;">
     <!-- Header -->
     <div style="padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
@@ -452,9 +451,7 @@
     <i class="fas fa-envelope"></i> Email
     <span class="nav-badge-dlp" id="mgr-unread-badge" style="display:none">0</span>
   </div>
-  <div class="nav-item-dlp" onclick="showPanel('cloud')" data-p="cloud">
-    <i class="fas fa-cloud-arrow-up"></i> Cloud Upload
-  </div>
+
 
   <div class="slabel-dlp">Meetings</div>
   <div class="nav-item-dlp" onclick="showPanel('client-approvals')" data-p="client-approvals">
@@ -762,7 +759,7 @@
           <button onclick="mgrFmCloseSend()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">✕</button>
         </div>
         <div class="mgr-send-body">
-          <div id="mgr-send-filename" style="font-weight:700;color:#fff;margin-bottom:14px;font-size:14px;"></div>
+          <div id="mgr-send-filename" style="font-weight:700;color:var(--text);margin-bottom:14px;font-size:14px;"></div>
           <div class="form-group">
             <label>Visibility</label>
             <select id="mgr-send-vis" onchange="mgrFmToggleSendVis()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;">
@@ -784,14 +781,14 @@
     </div>
 
     <!-- ── Save to File Manager Modal ── -->
-    <div id="mgr-saveto-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:4000;align-items:center;justify-content:center;">
+    <div id="mgr-saveto-modal" style="display:none;position:fixed;inset:0;background:rgba(26,35,64,0.55);z-index:4000;align-items:center;justify-content:center;">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:420px;overflow:hidden;">
         <div style="padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
           <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);letter-spacing:1px;">⬇ SAVE TO FILE MANAGER</span>
           <button onclick="mgrCloseSaveTo()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">✕</button>
         </div>
         <div style="padding:16px 18px;">
-          <div id="mgr-saveto-fname" style="font-size:13px;font-weight:600;color:#fff;margin-bottom:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+          <div id="mgr-saveto-fname" style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
           <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:8px;">SELECT DESTINATION FOLDER</div>
           <div id="mgr-saveto-tree" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:200px;overflow-y:auto;font-family:'Share Tech Mono',monospace;font-size:11px;"></div>
           <div id="mgr-saveto-msg" style="font-family:'Share Tech Mono',monospace;font-size:11px;margin-top:10px;min-height:18px;"></div>
@@ -971,108 +968,7 @@
   </div>
 
 
-  <!-- CLOUD UPLOAD TAB (Manager) -->
-  <div class="section-dlp" id="tab-cloud">
-    <div class="section-title"><i class="fas fa-cloud-arrow-up" style="color:var(--blue);margin-right:6px;"></i>Cloud Upload — DLP Monitored</div>
-
-    <!-- FM Picker Modal for Cloud -->
-    <div id="mgr-cl-picker-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:3000;align-items:center;justify-content:center;">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:90%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
-        <div style="padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--blue);letter-spacing:1px;">📁 SELECT FILES FROM FILE MANAGER</span>
-          <button onclick="mgrClClosePicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;">✕</button>
-        </div>
-        <div style="padding:8px 16px;border-bottom:1px solid var(--border);font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">
-          Click files to select (max 2). Selected: <span id="mgr-cl-pick-count" style="color:var(--green);">0</span>/2
-        </div>
-        <div style="display:flex;height:340px;overflow:hidden;">
-          <div style="width:150px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 0;background:rgba(0,0,0,0.2);overflow-y:auto;">
-            <div class="fm-sidebar-item-mgr" onclick="mgrClPickerNav('')" style="padding:6px 12px;font-size:10px;"><span>🏠</span> HOME</div>
-            <div class="fm-sidebar-item-mgr" onclick="mgrClPickerNav('Documents')" style="padding:6px 12px;font-size:10px;"><span>📄</span> DOCUMENTS</div>
-            <div class="fm-sidebar-item-mgr" onclick="mgrClPickerNav('Images')" style="padding:6px 12px;font-size:10px;"><span>🖼</span> IMAGES</div>
-            <div class="fm-sidebar-item-mgr" onclick="mgrClPickerNav('Spreadsheets')" style="padding:6px 12px;font-size:10px;"><span>📊</span> SPREADSHEETS</div>
-          </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;" id="mgr-cl-picker-content">
-            <div style="color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;text-align:center;padding:32px;">Loading…</div>
-          </div>
-        </div>
-        <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--surface2);">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:6px;">SELECTED:</div>
-          <div id="mgr-cl-pick-list" style="display:flex;gap:8px;flex-wrap:wrap;min-height:24px;"></div>
-        </div>
-        <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;">
-          <button onclick="mgrClConfirmPick()" style="flex:1;background:transparent;border:1px solid var(--green);color:var(--green);padding:9px;border-radius:7px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;">✓ USE SELECTED FILES</button>
-          <button onclick="mgrClClosePicker()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 18px;border-radius:7px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;">CANCEL</button>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-      <div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--blue);letter-spacing:2px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
-            <span><i class="fas fa-cloud"></i> UPLOAD TO GOOGLE DRIVE</span>
-            <span style="background:rgba(0,136,255,0.1);border:1px solid rgba(0,136,255,0.3);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:9px;">MANAGER</span>
-          </div>
-          <div class="form-group">
-            <label>Destination Folder</label>
-            <select id="mgr-cl-folder" onchange="mgrClCheckFolder()" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;">
-              <optgroup label="Allowed — No Approval Needed">
-                <option value="Public_Docs">Public_Docs</option>
-                <option value="Reports">Reports</option>
-                <option value="Shared_Data">Shared_Data</option>
-                <option value="Confidential">Confidential</option>
-                <option value="Sensitive_Projects">Sensitive_Projects</option>
-              </optgroup>
-              <optgroup label="Restricted — Admin Approval Required">
-                <option value="Private_Data">Private_Data</option>
-                <option value="Executive_Only">Executive_Only</option>
-              </optgroup>
-            </select>
-            <div id="mgr-cl-folderWarn" style="display:none;background:rgba(255,204,0,0.08);border:1px solid rgba(255,204,0,0.3);border-radius:6px;padding:8px 12px;margin-top:6px;font-size:11px;color:var(--yellow);font-family:'Share Tech Mono',monospace;">
-              ⚠ Restricted folder — Admin approval required (48hr SLA)
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Select Files from File Manager</label>
-            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-              <button onclick="mgrClOpenPicker()" style="background:transparent;border:1px solid var(--blue);color:var(--blue);padding:7px 16px;border-radius:7px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;display:flex;align-items:center;gap:6px;"><i class="fas fa-folder-open"></i> BROWSE FILE MANAGER</button>
-              <span id="mgr-cl-hint" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">No files selected</span>
-            </div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-top:5px;">Max 2 files, 10MB each — DLP scanned</div>
-          </div>
-          <div id="mgr-cl-fileList" style="margin-bottom:9px;"></div>
-          <div id="mgr-cl-dlpRes" style="margin-bottom:9px;"></div>
-          <div id="mgr-cl-prog" style="display:none;margin-bottom:10px;">
-            <div style="display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px;">
-              <span id="mgr-cl-progLbl">Uploading…</span><span id="mgr-cl-progPct">0%</span>
-            </div>
-            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
-              <div id="mgr-cl-progBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .4s;border-radius:4px;"></div>
-            </div>
-            <div id="mgr-cl-progSt" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px;">Initialising…</div>
-          </div>
-          <button id="mgr-cl-uploadBtn" onclick="mgrClUpload()" style="width:100%;background:transparent;border:1px solid var(--blue);color:var(--blue);padding:10px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;transition:all .2s;" onmouseover="this.style.background='rgba(0,136,255,0.1)'" onmouseout="this.style.background='transparent'">
-            <i class="fas fa-cloud-arrow-up"></i> UPLOAD TO GOOGLE DRIVE
-          </button>
-          <div id="mgr-cl-msg" style="margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:11px;display:none;padding:8px 12px;border-radius:6px;"></div>
-        </div>
-      </div>
-      <div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px;">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px;"><i class="fas fa-circle-info" style="color:var(--blue);"></i> UPLOAD POLICY</div>
-          <div style="background:rgba(0,136,255,0.06);border:1px solid rgba(0,136,255,0.2);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text);margin-bottom:10px;">All uploads are DLP-scanned for sensitive data (PII, credentials, classified content). Files with violations are blocked and logged.</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.15);border-radius:7px;padding:9px 12px;font-size:11px;"><i class="fas fa-check-circle" style="color:var(--green);margin-right:6px;"></i><strong style="color:var(--green);">Allowed without approval</strong> — Public_Docs, Reports, Shared_Data, Confidential, Sensitive_Projects</div>
-            <div style="background:rgba(255,204,0,0.06);border:1px solid rgba(255,204,0,0.15);border-radius:7px;padding:9px 12px;font-size:11px;"><i class="fas fa-lock" style="color:var(--yellow);margin-right:6px;"></i><strong style="color:var(--yellow);">Admin approval required</strong> — Private_Data, Executive_Only (48hr SLA)</div>
-            <div style="background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.15);border-radius:7px;padding:9px 12px;font-size:11px;"><i class="fas fa-ban" style="color:var(--red);margin-right:6px;"></i><strong style="color:var(--red);">Blocked types</strong> — .exe .bat .zip .rar .sql .db .key .dll .sh .cmd</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI RISK ENGINE TAB -->
+    <!-- AI RISK ENGINE TAB -->
   <div class="section-dlp" id="tab-airisk">
     <div class="section-title">AI Risk Engine — Explainable Insider Threat Scoring</div>
     <div id="ai-risk-summary"></div>
@@ -1164,6 +1060,11 @@
           <input id="mgr-em-sub" type="text" placeholder="Subject" style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;padding:6px 0;">
         </div>
         <textarea id="mgr-em-body" rows="8" style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:12px 14px;resize:vertical;line-height:1.7;" placeholder="Compose email…"></textarea>
+        <!-- Attachments -->
+        <div id="mgr-em-attach-row" style="padding:6px 14px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button onclick="mgrEmOpenAttachPicker()" style="background:transparent;border:1px solid rgba(26,111,239,0.4);color:var(--blue);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;"><i class="fas fa-paperclip"></i> ATTACH</button>
+          <div id="mgr-em-attach-list" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-height:22px;"></div>
+        </div>
         <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--surface2);">
           <button id="mgr-em-sendBtn" onclick="mgrEmSend()" class="btn-green btn-small"><i class="fas fa-paper-plane"></i> Send</button>
           <button onclick="mgrEmClear()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 6px;"><i class="fas fa-trash-alt"></i></button>
@@ -1284,7 +1185,7 @@ async function loadSecurityEvents() {
     tbody.innerHTML = events.map(function(e) {
       return '<tr>' +
         '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted)">' + (e.timestamp||'—') + '</td>' +
-        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:#fff">'         + (e.action||'—')    + '</td>' +
+        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--blue)">'         + (e.action||'—')    + '</td>' +
         '<td style="font-size:12px">'                                                              + (e.user_email||'—')+ '</td>' +
         '<td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.detail||'—') + '</td>' +
         '<td style="font-size:11px;color:var(--muted)">'                                           + (e.location||'—') + '</td>' +
@@ -1846,12 +1747,12 @@ function mgrMenuDelete() {
   // Custom confirmation overlay — same pattern as employee
   var overlay = document.createElement('div');
   overlay.id = 'mgr-delete-confirm';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(26,35,64,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
     '<div style="background:var(--surface);border:1px solid rgba(255,51,102,0.4);border-radius:14px;padding:32px;max-width:400px;width:90%;text-align:center;">'+
     '<div style="font-size:36px;margin-bottom:14px;">🗑</div>'+
     '<div style="font-family:Share Tech Mono,monospace;font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:10px;">DELETE FILE FROM SERVER</div>'+
-    '<div style="font-size:13px;color:#fff;margin-bottom:6px;word-break:break-all;">'+escH(fname)+'</div>'+
+    '<div style="font-size:13px;color:var(--text);margin-bottom:6px;word-break:break-all;">'+escH(fname)+'</div>'+
     '<div style="font-size:11px;color:var(--muted);font-family:Share Tech Mono,monospace;margin-bottom:24px;">This will permanently remove the file from the server and revoke all employee access.</div>'+
     '<div style="display:flex;gap:10px;justify-content:center;">'+
     '<button id="mgr-del-confirm-btn" style="background:rgba(255,51,102,0.15);border:1px solid var(--red);color:var(--red);padding:9px 24px;border-radius:8px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:1px;">YES, DELETE</button>'+
@@ -2308,7 +2209,7 @@ async function mgrLoadPendingApprovals() {
       var rid = r._id||'';
       return '<div class="mgr-approval-card">'+
         '<div class="mgr-approval-card-info">'+
-          '<div style="font-weight:700;font-size:13px;color:#fff;">'+escHtmlMgr(r.file_name||'—')+'</div>'+
+          '<div style="font-weight:700;font-size:13px;color:var(--blue);">'+escHtmlMgr(r.file_name||'—')+'</div>'+
           '<div style="font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);margin-top:4px;">'+
             '<span style="color:var(--yellow);">'+( r.request_type||'').toUpperCase()+'</span>'+
             ' &bull; by <span style="color:var(--text)">'+escHtmlMgr(r.requested_by||'—')+'</span>'+
@@ -2416,7 +2317,6 @@ window.showPanel = function showPanel(name) {
     mgrLoadMyTravelHistory();
   }
   if (name === 'files')     { mgrFmInitFS(); mgrFmRender(); mgrFmSwitchSection('home'); }
-  if (name === 'cloud')     { mgrClCheckFolder(); }
   if (name === 'airisk')    loadAIRiskScores();
   if (name === 'feed')      loadFeed();
   if (name === 'email')     { mgrEmLoadView(); mgrEmUpdateUnreadBadge(); }
@@ -2729,7 +2629,7 @@ async function loadTravelRequests(filter) {
       return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:10px;transition:border-color .18s;" onmouseover="this.style.borderColor=\'rgba(0,136,255,0.3)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">' +
           '<div style="flex:1;">' +
-            '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:7px;">'+escH(r.source||'—')+' <span style="color:var(--blue);margin:0 4px;">→</span> '+escH(r.destination||'—')+'</div>' +
+            '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:7px;">'+escH(r.source||'—')+' <span style="color:var(--blue);margin:0 4px;">→</span> '+escH(r.destination||'—')+'</div>' +
             '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;margin-bottom:5px;">' +
               '<span>👤 <span style="color:var(--text);">'+escH(r.name)+'</span></span>' +
               '<span>📧 '+escH(r.email)+'</span>' +
@@ -3151,6 +3051,8 @@ function mgrEmCloseCompose() {
   document.getElementById('mgr-em-compose-modal').style.display='none';
   mgrEmState.composeToR=[];
   mgrEmRenderComposeTags();
+  if (typeof mgrEmAttachFiles !== 'undefined') { mgrEmAttachFiles = []; mgrEmRenderAttachList(); }
+  mgrEmCloseAttachPicker();
 }
 
 function mgrEmMinimizeCompose() {
@@ -3214,13 +3116,25 @@ async function mgrEmSend() {
   if (!body)    { mgMsg('Message body is required','warn'); return; }
   btn.disabled=true; mgMsg('Sending…','ok');
   try {
-    var r = await fetch('/api/mail/send', {
-      method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token': SESSION_TOKEN},
-      body: JSON.stringify({ to:mgrEmState.composeToR, subject:subject, body:body })
-    });
+    var r;
+    var attachList = (typeof mgrEmAttachFiles !== 'undefined') ? mgrEmAttachFiles : [];
+    if (attachList.length > 0) {
+      var fd = new FormData();
+      fd.append('to',        JSON.stringify(mgrEmState.composeToR));
+      fd.append('subject',   subject);
+      fd.append('body',      body);
+      fd.append('vfs_files', JSON.stringify(attachList.map(function(f){ return {name:f.name, fid:f.fid}; })));
+      r = await fetch('/api/mail/send', { method:'POST', headers:{'X-Auth-Token': SESSION_TOKEN}, body: fd });
+    } else {
+      r = await fetch('/api/mail/send', {
+        method:'POST', headers:{'Content-Type':'application/json','X-Auth-Token': SESSION_TOKEN},
+        body: JSON.stringify({ to:mgrEmState.composeToR, subject:subject, body:body })
+      });
+    }
     var data = await r.json();
     if (data.success) {
-      mgMsg('✓ Sent to '+mgrEmState.composeToR.length+' recipient(s)','ok');
+      var ac = attachList.length;
+      mgMsg('✓ Sent to '+mgrEmState.composeToR.length+' recipient(s)'+(ac?' with '+ac+' attachment(s)':''),'ok');
       setTimeout(mgrEmCloseCompose, 1200);
       mgrEmLoadView();
     } else if (data.blocked) {
@@ -4081,201 +3995,7 @@ socket.on('travel_mode_resolved', function(data) {
   });
 });
 
-// ── MANAGER CLOUD UPLOAD ──────────────────────────────────────────────────────
-var MGR_CLOUD_RESTRICTED = ['Private_Data','Executive_Only'];
-var MGR_CLOUD_BLOCKED_EXT = ['exe','bat','zip','rar','sql','db','key','dll','sh','cmd','msi','ps1','vbs'];
-var mgrClFiles = [];
-var mgrClPickerSel = {};
-var mgrClPickerCwd = '';
 
-function mgrClCheckFolder() {
-  var f = document.getElementById('mgr-cl-folder').value;
-  var w = document.getElementById('mgr-cl-folderWarn');
-  if (w) w.style.display = MGR_CLOUD_RESTRICTED.includes(f) ? 'block' : 'none';
-}
-
-function mgrClOpenPicker() {
-  mgrClPickerSel = {}; mgrClPickerCwd = '';
-  mgrClRenderPickerContent();
-  mgrClRenderPickerSel();
-  document.getElementById('mgr-cl-picker-modal').style.display = 'flex';
-}
-function mgrClClosePicker() { document.getElementById('mgr-cl-picker-modal').style.display = 'none'; }
-
-function mgrClPickerNav(path) {
-  mgrClPickerCwd = path;
-  mgrClRenderPickerContent();
-}
-
-function mgrClRenderPickerContent() {
-  var node = mgrFmGetNode(mgrClPickerCwd);
-  var el   = document.getElementById('mgr-cl-picker-content');
-  if (!node || node.type !== 'folder') {
-    el.innerHTML = '<div style="color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:20px;text-align:center;">Empty folder</div>';
-    return;
-  }
-  var keys = Object.keys(node.children || {}).sort(function(a,b){
-    var ta=node.children[a].type, tb=node.children[b].type;
-    if(ta===tb)return a.localeCompare(b);
-    return ta==='folder'?-1:1;
-  });
-  if (!keys.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:20px;text-align:center;">Empty folder — upload files via File Manager first</div>';
-    return;
-  }
-  el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;">' +
-    keys.map(function(k) {
-      var item = node.children[k];
-      var isF  = item.type === 'folder';
-      var icon = isF ? '📁' : mgrFIconByName(k);
-      var sel  = !!mgrClPickerSel[k];
-      var bdr  = sel ? 'border-color:var(--green);background:rgba(0,255,136,0.1);' : '';
-      return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s;'+bdr+'" ' +
-        'onclick="mgrClPickClick(\''+escQ_mgr(k)+'\','+isF+')" ' +
-        (isF ? 'ondblclick="mgrClPickerNav(\''+escQ_mgr(mgrClPickerCwd ? mgrClPickerCwd+'/'+k : k)+'\')"' : '') + '>' +
-        '<div style="font-size:24px;margin-bottom:4px;">'+icon+'</div>' +
-        '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escH(k)+'</div>' +
-        (isF?'':'<div style="font-family:\'Share Tech Mono\',monospace;font-size:8px;color:var(--muted);">'+mgrFmtBytes(item.size||0)+'</div>') +
-        '</div>';
-    }).join('') + '</div>';
-}
-
-function mgrClPickClick(name, isFolder) {
-  if (isFolder) { mgrClPickerNav(mgrClPickerCwd ? mgrClPickerCwd+'/'+name : name); return; }
-  var node = mgrFmGetNode(mgrClPickerCwd);
-  if (!node || !node.children || !node.children[name]) return;
-  if (mgrClPickerSel[name]) {
-    delete mgrClPickerSel[name];
-  } else {
-    if (Object.keys(mgrClPickerSel).length >= 2) { alert('Max 2 files allowed.'); return; }
-    mgrClPickerSel[name] = node.children[name];
-  }
-  mgrClRenderPickerContent();
-  mgrClRenderPickerSel();
-}
-
-function mgrClRenderPickerSel() {
-  var keys  = Object.keys(mgrClPickerSel);
-  var count = document.getElementById('mgr-cl-pick-count');
-  var list  = document.getElementById('mgr-cl-pick-list');
-  if (count) count.textContent = keys.length;
-  if (!list) return;
-  list.innerHTML = keys.map(function(k) {
-    return '<span style="background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.3);color:var(--green);padding:3px 10px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:10px;display:flex;align-items:center;gap:4px;">' +
-      mgrFIconByName(k) + ' ' + escH(k) +
-      '<span onclick="mgrClPickRemove(\''+escQ_mgr(k)+'\')" style="cursor:pointer;margin-left:4px;color:var(--red);font-size:14px;line-height:1;">×</span></span>';
-  }).join('') || '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);">None selected</span>';
-}
-
-function mgrClPickRemove(name) { delete mgrClPickerSel[name]; mgrClRenderPickerContent(); mgrClRenderPickerSel(); }
-
-function mgrClConfirmPick() {
-  var keys = Object.keys(mgrClPickerSel);
-  if (!keys.length) { alert('Select at least one file.'); return; }
-  mgrClFiles = keys.map(function(k) {
-    var n = mgrClPickerSel[k];
-    return { name:k, size:n.size||0, type:n.mime||'application/octet-stream', _fmNode:n, _fromFM:true };
-  });
-  var hint = document.getElementById('mgr-cl-hint');
-  if (hint) hint.textContent = keys.join(', ');
-  mgrClClosePicker();
-  mgrClRenderFileList();
-  mgrClRunDLP();
-}
-
-function mgrClRenderFileList() {
-  var el = document.getElementById('mgr-cl-fileList');
-  if (!el) return;
-  if (!mgrClFiles.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:6px;">' +
-    mgrClFiles.map(function(f, i) {
-      var ext = f.name.split('.').pop().toLowerCase();
-      var bad = MGR_CLOUD_BLOCKED_EXT.includes(ext) || f.size > 10*1024*1024;
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;'+(i<mgrClFiles.length-1?'border-bottom:1px solid var(--border);':'')+'">' +
-        '<span style="font-size:18px;">'+mgrFIconByName(f.name)+'</span>' +
-        '<span style="flex:1;font-family:\'Share Tech Mono\',monospace;font-size:11px;color:'+(bad?'var(--red)':'var(--text)')+';">'+escH(f.name)+'</span>' +
-        '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);">'+mgrFmtBytes(f.size)+'</span>' +
-        (bad ? '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--red);">⚠ BLOCKED</span>' : '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--green);">✓ OK</span>') +
-        '</div>';
-    }).join('') + '</div>';
-}
-
-function mgrClRunDLP() {
-  var folder = document.getElementById('mgr-cl-folder').value;
-  var issues = [];
-  if (mgrClFiles.length > 2) issues.push({sev:'HIGH', msg:mgrClFiles.length+' files exceeds 2-file limit'});
-  if (MGR_CLOUD_RESTRICTED.includes(folder)) issues.push({sev:'MEDIUM', msg:'Restricted folder — admin approval required'});
-  mgrClFiles.forEach(function(f) {
-    var ext = f.name.split('.').pop().toLowerCase();
-    if (MGR_CLOUD_BLOCKED_EXT.includes(ext)) issues.push({sev:'HIGH', msg:f.name+' — blocked file type'});
-    if (f.size > 10*1024*1024) issues.push({sev:'HIGH', msg:f.name+' — exceeds 10MB limit'});
-  });
-  var el = document.getElementById('mgr-cl-dlpRes');
-  if (!el) return;
-  if (!issues.length) {
-    el.innerHTML = '<div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.2);border-radius:6px;padding:8px 12px;font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--green);">✓ DLP PRE-CHECK PASSED</div>';
-  } else {
-    el.innerHTML = '<div style="background:rgba(255,51,102,0.06);border:1px solid rgba(255,51,102,0.2);border-radius:6px;padding:8px 12px;">' +
-      issues.map(function(iss){ return '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:'+(iss.sev==='HIGH'?'var(--red)':'var(--yellow)')+';">⚠ ['+iss.sev+'] '+escH(iss.msg)+'</div>'; }).join('') + '</div>';
-  }
-}
-
-async function mgrClUpload() {
-  var folder = document.getElementById('mgr-cl-folder').value;
-  var msgEl  = document.getElementById('mgr-cl-msg');
-  function mgrMsg(t,c) {
-    msgEl.textContent = t; msgEl.style.display = 'block';
-    msgEl.style.background = c==='ok' ? 'rgba(0,255,136,0.08)' : c==='warn' ? 'rgba(255,204,0,0.08)' : 'rgba(255,51,102,0.08)';
-    msgEl.style.color = c==='ok' ? 'var(--green)' : c==='warn' ? 'var(--yellow)' : 'var(--red)';
-    msgEl.style.border = '1px solid '+(c==='ok'?'rgba(0,255,136,0.3)':c==='warn'?'rgba(255,204,0,0.3)':'rgba(255,51,102,0.3)');
-    setTimeout(function(){msgEl.style.display='none';}, 6000);
-  }
-  if (!mgrClFiles.length) { mgrMsg('Select files from File Manager first.','warn'); return; }
-  if (mgrClFiles.length > 2) { mgrMsg('Max 2 files allowed.','err'); return; }
-  var blocked = mgrClFiles.filter(function(f){ return MGR_CLOUD_BLOCKED_EXT.includes(f.name.split('.').pop().toLowerCase()); });
-  if (blocked.length) { mgrMsg('Blocked file types: '+blocked.map(function(f){return f.name;}).join(', '),'err'); return; }
-
-  var btn = document.getElementById('mgr-cl-uploadBtn'); btn.disabled = true;
-  var prog = document.getElementById('mgr-cl-prog');
-  var bar  = document.getElementById('mgr-cl-progBar');
-  var pct  = document.getElementById('mgr-cl-progPct');
-  var st   = document.getElementById('mgr-cl-progSt');
-  prog.style.display = 'block'; bar.style.width = '10%'; pct.textContent = '10%'; st.textContent = 'Preparing…';
-
-  try {
-    var fd = new FormData();
-    var fmIds = [];
-    for (var i=0; i<mgrClFiles.length; i++) {
-      var f = mgrClFiles[i];
-      if (f._fromFM && f._fmNode && f._fmNode.fid) fmIds.push({name:f.name, fid:f._fmNode.fid});
-      else if (!f._fromFM) fd.append('files', f);
-    }
-    fd.append('folder', folder);
-    fd.append('vfs_files', JSON.stringify(fmIds));
-    bar.style.width='40%'; pct.textContent='40%'; st.textContent='Running DLP scan…';
-    var res = await fetch('/upload_to_drive', {
-      method:'POST', body:fd, headers:{'X-Auth-Token': SESSION_TOKEN}
-    });
-    var data = await res.json();
-    bar.style.width='100%'; pct.textContent='100%';
-    if (data.success) {
-      st.textContent = 'Complete!';
-      mgrMsg('Uploaded '+mgrClFiles.length+' file(s) to '+folder, 'ok');
-      mgrClFiles = [];
-      var hint = document.getElementById('mgr-cl-hint'); if (hint) hint.textContent = 'No files selected';
-      document.getElementById('mgr-cl-fileList').innerHTML = '';
-      document.getElementById('mgr-cl-dlpRes').innerHTML  = '';
-    } else if (data.requires_approval) {
-      st.textContent = 'Awaiting admin approval…';
-      mgrMsg('Admin approval required — ticket raised (48hr SLA)', 'warn');
-    } else {
-      st.textContent = 'Blocked.';
-      mgrMsg('BLOCKED: '+((data.alerts||[]).map(function(a){return a.message;}).join('; ')||data.error||'DLP violation'), 'err');
-    }
-    setTimeout(function(){ prog.style.display='none'; bar.style.width='0%'; }, 2000);
-  } catch(ex) { mgrMsg('Error: '+ex.message, 'err'); prog.style.display='none'; }
-  finally { btn.disabled = false; }
-}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 mgrFmInitFS();
@@ -4513,6 +4233,227 @@ showPanel = function(name) {
   }, 1500);
 })();
 
+</script>
+<!-- ══ EMAIL ATTACH — VFS FILE PICKER OVERLAY ══════════════════════════════ -->
+<div id="mgr-em-attach-picker-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,35,64,0.72);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:640px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,111,239,0.18);overflow:hidden;">
+    <div style="background:var(--surface2);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--blue);letter-spacing:2px;">📎 ATTACH FROM FILES</span>
+        <span id="mgr-em-ap-count-badge" style="background:rgba(26,111,239,0.12);border:1px solid rgba(26,111,239,0.3);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 8px;border-radius:100px;display:none;">0 / 3</span>
+      </div>
+      <button onclick="mgrEmCloseAttachPicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 8px;border-radius:6px;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surface2);">
+      <div id="mgr-em-ap-breadcrumb" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--blue);display:flex;align-items:center;gap:4px;flex:1;overflow:hidden;white-space:nowrap;"></div>
+      <input id="mgr-em-ap-search" type="text" placeholder="🔍 Search files…" oninput="mgrEmApSearch(this.value)"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;width:180px;">
+    </div>
+    <div id="mgr-em-ap-grid" style="flex:1;overflow-y:auto;padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start;"></div>
+    <div id="mgr-em-ap-selected-bar" style="display:none;padding:8px 16px;border-top:1px solid var(--border);background:var(--surface2);flex-wrap:wrap;align-items:center;gap:8px;min-height:42px;">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0;">SELECTED:</span>
+      <div id="mgr-em-ap-selected-chips" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;"></div>
+    </div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2);">
+      <span id="mgr-em-ap-hint" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">Click files to select · Max 3 · Folders to navigate</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="mgrEmCloseAttachPicker()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;">Cancel</button>
+        <button onclick="mgrEmConfirmAttach()" style="background:var(--blue);border:1px solid var(--blue);color:#fff;padding:6px 18px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;">✓ Attach</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Manager Email Attachments — VFS File Picker ────────────────────────────
+var mgrEmAttachFiles = [];
+var mgrEmApCwd       = '';
+var mgrEmApSearchQ   = '';
+
+function mgrEmApFlatFiles(node, path) {
+  var out = [];
+  if (!node || !node.children) return out;
+  Object.keys(node.children).forEach(function(k) {
+    var c = node.children[k];
+    var p = path ? path + '/' + k : k;
+    if (c.type === 'folder') out = out.concat(mgrEmApFlatFiles(c, p));
+    else out.push({ name: k, path: p, fid: c.fid || null, size: c.size || 0, mime: c.mime || '', _node: c });
+  });
+  return out;
+}
+
+function mgrEmOpenAttachPicker() {
+  if (!mgrFmFS) mgrFmInitFS();
+  mgrEmApCwd     = '';
+  mgrEmApSearchQ = '';
+  var inp = document.getElementById('mgr-em-ap-search');
+  if (inp) inp.value = '';
+  var ov = document.getElementById('mgr-em-attach-picker-overlay');
+  ov.style.display = 'flex';
+  mgrEmApRender();
+}
+
+function mgrEmCloseAttachPicker() {
+  var ov = document.getElementById('mgr-em-attach-picker-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function mgrEmConfirmAttach() { mgrEmCloseAttachPicker(); }
+
+function mgrEmApSearch(q) { mgrEmApSearchQ = q.toLowerCase(); mgrEmApRender(); }
+
+function mgrEmApNavTo(path) {
+  mgrEmApCwd     = path;
+  mgrEmApSearchQ = '';
+  var inp = document.getElementById('mgr-em-ap-search');
+  if (inp) inp.value = '';
+  mgrEmApRender();
+}
+
+function mgrEmFmtBytes(b) { if (!b) return '—'; if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(1) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+function mgrEmFIconByName(n) { var e = n.split('.').pop().toLowerCase(); if (e==='pdf') return '📕'; if (e==='docx'||e==='doc') return '📘'; if (e==='xlsx'||e==='xls') return '📗'; if (e==='pptx'||e==='ppt') return '📙'; if (['png','jpg','jpeg','gif','webp'].includes(e)) return '🖼'; if (['txt','csv','json'].includes(e)) return '📃'; return '📄'; }
+function mgrEmEscH2(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function mgrEmApRender() {
+  var grid = document.getElementById('mgr-em-ap-grid');
+  var bc   = document.getElementById('mgr-em-ap-breadcrumb');
+  var hint = document.getElementById('mgr-em-ap-hint');
+
+  var parts  = mgrEmApCwd ? mgrEmApCwd.split('/').filter(Boolean) : [];
+  var bcHtml = '<span onclick="mgrEmApNavTo(\'\')" style="cursor:pointer;color:var(--blue);">🏠 Home</span>';
+  var built  = '';
+  parts.forEach(function(p, i) {
+    built = built ? built + '/' + p : p;
+    var snap = built;
+    bcHtml += '<span style="color:var(--muted);margin:0 3px;">/</span>';
+    if (i === parts.length - 1) {
+      bcHtml += '<span style="color:var(--text);">' + mgrEmEscH2(p) + '</span>';
+    } else {
+      bcHtml += '<span onclick="mgrEmApNavTo(\'' + snap.replace(/'/g,"\\'") + '\')" style="cursor:pointer;color:var(--blue);">' + mgrEmEscH2(p) + '</span>';
+    }
+  });
+  bc.innerHTML = bcHtml;
+
+  if (mgrEmApSearchQ) {
+    var all = mgrEmApFlatFiles(mgrFmFS, '');
+    var items = all.filter(function(f){ return f.name.toLowerCase().indexOf(mgrEmApSearchQ) !== -1; });
+    hint.textContent = items.length + ' result(s)';
+    grid.innerHTML = items.length ? items.map(function(f,i){ return mgrEmApFileCard(f,true); }).join('') :
+      '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">No files match</div>';
+    mgrEmApUpdateSelectedBar();
+    return;
+  }
+
+  var node = mgrEmApCwd ? (function() {
+    var pp = mgrEmApCwd.split('/').filter(Boolean), n = mgrFmFS;
+    for (var i=0; i<pp.length; i++) { n = (n.children||{})[pp[i]]; if (!n) return null; }
+    return n;
+  })() : mgrFmFS;
+
+  if (!node) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">Folder not found</div>'; return; }
+
+  var folders = [], files = [];
+  Object.keys(node.children || {}).forEach(function(k) {
+    var c = node.children[k];
+    if (c.type === 'folder') folders.push({ name: k });
+    else files.push({ name: k, fid: c.fid||null, size: c.size||0, mime: c.mime||'', path: mgrEmApCwd ? mgrEmApCwd+'/'+k : k, _node: c });
+  });
+
+  if (!folders.length && !files.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">This folder is empty<br><span style="font-size:9px;opacity:.7;">Upload files in the Files section first</span></div>';
+    mgrEmApUpdateSelectedBar(); return;
+  }
+
+  hint.textContent = folders.length + ' folder(s), ' + files.length + ' file(s) · Click to select · Max 3';
+  var html = '';
+  if (mgrEmApCwd) {
+    var pp2 = mgrEmApCwd.indexOf('/') !== -1 ? mgrEmApCwd.substring(0, mgrEmApCwd.lastIndexOf('/')) : '';
+    html += '<div onclick="mgrEmApNavTo(\'' + pp2.replace(/'/g,"\\'") + '\')" style="border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;background:var(--surface2);" onmouseover="this.style.borderColor=\'rgba(224,138,0,0.5)\'" onmouseout="this.style.borderColor=\'var(--border)\'"><div style="font-size:26px;margin-bottom:6px;">⬆️</div><div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);">.. Up</div></div>';
+  }
+  folders.forEach(function(f) {
+    var nav = mgrEmApCwd ? mgrEmApCwd+'/'+f.name : f.name;
+    html += '<div onclick="mgrEmApNavTo(\'' + nav.replace(/'/g,"\\'") + '\')" style="border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;" onmouseover="this.style.borderColor=\'rgba(224,138,0,0.5)\';this.style.background=\'rgba(224,138,0,0.04)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'\'"><div style="font-size:26px;margin-bottom:6px;">📁</div><div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + mgrEmEscH2(f.name) + '">' + mgrEmEscH2(f.name) + '</div></div>';
+  });
+  files.forEach(function(f) { html += mgrEmApFileCard(f, false); });
+  grid.innerHTML = html;
+  mgrEmApUpdateSelectedBar();
+}
+
+function mgrEmApFileCard(f, isSearch) {
+  var icon  = mgrEmFIconByName(f.name);
+  var isSel = mgrEmAttachFiles.some(function(a){ return a.path === f.path; });
+  var isBlk = mgrEmAttachFiles.length >= 3 && !isSel;
+  var dirTxt = isSearch && f.path.indexOf('/') !== -1 ? f.path.split('/').slice(0,-1).join('/') : '';
+  return '<div onclick="' + (isBlk ? '' : 'mgrEmApToggleFile(\'' + f.path.replace(/'/g,"\\'") + '\',\'' + (f.fid||'').replace(/'/g,"\\'") + '\',' + f.size + ',\'' + (f.mime||'').replace(/'/g,"\\'") + '\')') + '"' +
+    ' style="border:' + (isSel ? '2px solid var(--blue)' : '1px solid var(--border)') + ';border-radius:10px;padding:12px 8px;text-align:center;cursor:' + (isBlk ? 'not-allowed' : 'pointer') + ';transition:all .15s;background:' + (isSel ? 'rgba(26,111,239,0.08)' : '') + ';opacity:' + (isBlk ? '.45' : '1') + ';position:relative;"' +
+    (isBlk ? '' : ' onmouseover="if(!this.dataset.sel)this.style.borderColor=\'rgba(26,111,239,0.5)\'" onmouseout="if(!this.dataset.sel)this.style.borderColor=\'var(--border)\'"') +
+    (isSel ? ' data-sel="1"' : '') +
+    '>' +
+    (isSel ? '<div style="position:absolute;top:5px;right:6px;background:var(--blue);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;">✓</div>' : '') +
+    '<div style="font-size:24px;margin-bottom:5px;">' + icon + '</div>' +
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + mgrEmEscH2(f.name) + '">' + mgrEmEscH2(f.name) + '</div>' +
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:8px;color:var(--muted);margin-top:2px;">' + mgrEmFmtBytes(f.size) + (dirTxt ? ' · ' + mgrEmEscH2(dirTxt) : '') + '</div>' +
+  '</div>';
+}
+
+function mgrEmApToggleFile(path, fid, size, mime) {
+  var name = path.split('/').pop();
+  var idx  = mgrEmAttachFiles.findIndex(function(a){ return a.path === path; });
+  if (idx !== -1) { mgrEmAttachFiles.splice(idx, 1); }
+  else {
+    if (mgrEmAttachFiles.length >= 3) { return; }
+    mgrEmAttachFiles.push({ name: name, path: path, fid: fid, size: size, mime: mime });
+  }
+  mgrEmApUpdateSelectedBar();
+  mgrEmRenderAttachList();
+  mgrEmApRender();
+}
+
+function mgrEmApUpdateCountBadge() {
+  var b = document.getElementById('mgr-em-ap-count-badge');
+  if (!b) return;
+  var n = mgrEmAttachFiles.length;
+  b.textContent = n + ' / 3'; b.style.display = n ? 'inline' : 'none';
+  b.style.background   = n >= 3 ? 'rgba(224,37,58,0.12)' : 'rgba(26,111,239,0.12)';
+  b.style.color        = n >= 3 ? 'var(--red)' : 'var(--blue)';
+  b.style.borderColor  = n >= 3 ? 'rgba(224,37,58,0.3)' : 'rgba(26,111,239,0.3)';
+}
+
+function mgrEmApUpdateSelectedBar() {
+  var bar   = document.getElementById('mgr-em-ap-selected-bar');
+  var chips = document.getElementById('mgr-em-ap-selected-chips');
+  mgrEmApUpdateCountBadge();
+  if (!mgrEmAttachFiles.length) { if (bar) bar.style.display = 'none'; return; }
+  if (bar) bar.style.display = 'flex';
+  if (chips) chips.innerHTML = mgrEmAttachFiles.map(function(f, i) {
+    return '<span style="background:rgba(26,111,239,0.1);border:1px solid rgba(26,111,239,0.3);color:var(--blue);padding:2px 8px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:9px;display:inline-flex;align-items:center;gap:4px;">' +
+      mgrEmFIconByName(f.name) + ' ' + mgrEmEscH2(f.name.length > 18 ? f.name.slice(0,18)+'…' : f.name) +
+      '<span onclick="mgrEmApRemoveSel(' + i + ')" style="cursor:pointer;color:var(--red);font-size:12px;line-height:1;">×</span></span>';
+  }).join('');
+}
+
+function mgrEmApRemoveSel(i) {
+  mgrEmAttachFiles.splice(i, 1);
+  mgrEmApUpdateSelectedBar();
+  mgrEmRenderAttachList();
+  mgrEmApRender();
+}
+
+function mgrEmRenderAttachList() {
+  var el = document.getElementById('mgr-em-attach-list');
+  if (!el) return;
+  el.innerHTML = mgrEmAttachFiles.map(function(f, i) {
+    return '<span style="background:rgba(26,111,239,0.1);border:1px solid rgba(26,111,239,0.3);color:var(--blue);padding:2px 8px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:9px;display:inline-flex;align-items:center;gap:4px;">📎 ' +
+      mgrEmEscH2(f.name.length > 20 ? f.name.slice(0,20)+'…' : f.name) +
+      '<span onclick="mgrEmRemoveAttach(' + i + ')" style="cursor:pointer;color:var(--red);font-size:12px;margin-left:2px;">×</span></span>';
+  }).join('');
+}
+
+function mgrEmRemoveAttach(i) {
+  mgrEmAttachFiles.splice(i, 1);
+  mgrEmRenderAttachList();
+  mgrEmApUpdateCountBadge();
+}
 </script>
 
 </body>

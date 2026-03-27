@@ -12,18 +12,18 @@
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-:root{--green:#00ff88;--red:#ff3366;--yellow:#ffcc00;--blue:#0088ff;--orange:#ff8800;--bg:#050508;--surface:#0d0d15;--surface2:#12121e;--border:#1a1a2e;--text:#c8d6e5;--muted:#4a5568;}
+:root{--green:#0f9e6e;--green-dim:#0b8560;--red:#e0253a;--yellow:#e08a00;--blue:#1a6fef;--orange:#c96a00;--bg:#eef2ff;--surface:#ffffff;--surface2:#f5f7ff;--border:#dde3f5;--text:#1a2340;--muted:#6b7fa8;}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
-nav{position:sticky;top:0;z-index:100;background:rgba(5,5,8,0.95);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;backdrop-filter:blur(10px);}
-.nav-brand{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--green);letter-spacing:2px;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,111,239,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(26,111,239,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+nav{position:sticky;top:0;z-index:100;background:rgba(238,242,255,0.97);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;backdrop-filter:blur(10px);}
+.nav-brand{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--blue);letter-spacing:2px;}
 .nav-right{display:flex;align-items:center;gap:16px;}
 .user-chip{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;font-family:'Share Tech Mono',monospace;}
-.role-badge{background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.3);color:var(--green);border-radius:4px;padding:4px 10px;font-size:11px;letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
-.logout-btn{background:transparent;border:1px solid rgba(255,51,102,0.4);color:var(--red);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;}
-#session-bar{background:rgba(255,204,0,0.06);border-bottom:1px solid rgba(255,204,0,0.15);padding:5px 28px;display:flex;align-items:center;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:11px;position:sticky;top:60px;z-index:99;}
-.ext-btn{background:transparent;border:1px solid rgba(255,204,0,0.4);color:var(--yellow);padding:3px 12px;border-radius:4px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;}
+.role-badge{background:rgba(26,111,239,0.1);border:1px solid rgba(26,111,239,0.3);color:var(--blue);border-radius:4px;padding:4px 10px;font-size:11px;letter-spacing:2px;font-family:'Share Tech Mono',monospace;}
+.logout-btn{background:transparent;border:1px solid rgba(224,37,58,0.4);color:var(--red);padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;}
+#session-bar{background:rgba(224,138,0,0.06);border-bottom:1px solid rgba(224,138,0,0.2);padding:5px 28px;display:flex;align-items:center;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:11px;position:sticky;top:60px;z-index:99;}
+.ext-btn{background:transparent;border:1px solid rgba(224,138,0,0.5);color:var(--yellow);padding:3px 12px;border-radius:4px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;}
 .main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 20px;}
 .sec-title{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
@@ -34,49 +34,49 @@ nav{position:sticky;top:0;z-index:100;background:rgba(5,5,8,0.95);border-bottom:
 .panel{display:none;}
 .panel.active{display:block;}
 /* sidebar nav active handled by .section-dlp */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:16px;box-shadow:0 2px 12px rgba(26,111,239,0.06);}
 .ctx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;}
 .ctx-item label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:6px;}
-.ctx-item .val{font-size:16px;font-weight:600;color:#fff;}
+.ctx-item .val{font-size:16px;font-weight:600;color:var(--text);}
 .fg{margin-bottom:14px;}
 .fg label{display:block;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;}
 .fg input,.fg select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;}
-.fg input:focus,.fg select:focus{border-color:rgba(0,136,255,0.5);}
-.btn{background:transparent;border:1px solid var(--green);color:var(--green);padding:9px 20px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;}
-.btn:hover{background:rgba(0,255,136,0.1);}
+.fg input:focus,.fg select:focus{border-color:rgba(26,111,239,0.5);}
+.btn{background:transparent;border:1px solid var(--blue);color:var(--blue);padding:9px 20px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;transition:all 0.2s;}
+.btn:hover{background:rgba(26,111,239,0.08);}
 .btn-b{border-color:var(--blue);color:var(--blue);}
-.btn-b:hover{background:rgba(0,136,255,0.1);}
+.btn-b:hover{background:rgba(26,111,239,0.08);}
 .btn-r{border-color:var(--red);color:var(--red);}
-.btn-r:hover{background:rgba(255,51,102,0.1);}
+.btn-r:hover{background:rgba(224,37,58,0.08);}
 .btn-sm{padding:5px 12px;font-size:11px;}
 .msg{margin-top:10px;font-family:'Share Tech Mono',monospace;font-size:12px;padding:8px 12px;border-radius:6px;display:none;}
-.msg.ok{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3);display:block;}
-.msg.err{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.3);display:block;}
-.msg.warn{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.3);display:block;}
+.msg.ok{background:rgba(15,158,110,0.08);color:var(--green);border:1px solid rgba(15,158,110,0.3);display:block;}
+.msg.err{background:rgba(224,37,58,0.07);color:var(--red);border:1px solid rgba(224,37,58,0.3);display:block;}
+.msg.warn{background:rgba(224,138,0,0.08);color:var(--yellow);border:1px solid rgba(224,138,0,0.3);display:block;}
 table{width:100%;border-collapse:collapse;}
 th{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);}
-td{padding:12px 16px;border-bottom:1px solid rgba(26,26,46,0.5);font-size:14px;}
-tr:last-child td{border-bottom:none;}
+td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:14px;color:var(--text);}
+tr:last-child td{border-bottom:none;}tr:hover td{background:rgba(26,111,239,0.03);}
 .empty{text-align:center;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:12px;padding:32px;}
 .badge{padding:3px 10px;border-radius:4px;font-size:10px;font-family:'Share Tech Mono',monospace;font-weight:bold;}
-.bg{background:rgba(0,255,136,0.1);color:var(--green);border:1px solid rgba(0,255,136,0.3);}
-.br{background:rgba(255,51,102,0.1);color:var(--red);border:1px solid rgba(255,51,102,0.3);}
-.by{background:rgba(255,204,0,0.1);color:var(--yellow);border:1px solid rgba(255,204,0,0.3);}
-.bb{background:rgba(0,136,255,0.1);color:var(--blue);border:1px solid rgba(0,136,255,0.3);}
+.bg{background:rgba(15,158,110,0.1);color:var(--green);border:1px solid rgba(15,158,110,0.3);}
+.br{background:rgba(224,37,58,0.1);color:var(--red);border:1px solid rgba(224,37,58,0.3);}
+.by{background:rgba(224,138,0,0.1);color:var(--yellow);border:1px solid rgba(224,138,0,0.3);}
+.bb{background:rgba(26,111,239,0.1);color:var(--blue);border:1px solid rgba(26,111,239,0.3);}
 .file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
 .fc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color 0.2s;}
-.fc:hover{border-color:rgba(0,255,136,0.3);}
-.fc-name{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fc:hover{border-color:rgba(26,111,239,0.4);}
+.fc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fc-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:800px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;}
-.modal-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.modal-ttl{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--green);letter-spacing:1px;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(26,35,64,0.6);z-index:1000;align-items:center;justify-content:center;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:800px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 24px 64px rgba(26,111,239,0.15);}
+.modal-hdr{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2);}
+.modal-ttl{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--blue);letter-spacing:1px;}
 .modal-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px 8px;}
 .modal-x:hover{color:var(--red);}
-.modal-ftr{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+.modal-ftr{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;background:var(--surface2);}
 #watermark{position:absolute;inset:0;pointer-events:none;z-index:20;overflow:hidden;user-select:none;}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;align-items:center;justify-content:center;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(26,35,64,0.85);z-index:99999;align-items:center;justify-content:center;}
 .pbar-wrap{margin-bottom:12px;}
 .pbar-lbl{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;}
 .pbar-track{background:var(--surface2);border-radius:4px;overflow:hidden;height:6px;}
@@ -89,37 +89,37 @@ tr:last-child td{border-bottom:none;}
 }
 
 /* Topbar */
-.topbar-dlp{position:fixed;top:0;left:0;right:0;height:var(--tb);background:rgba(5,5,8,0.97);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;z-index:1100;gap:10px;backdrop-filter:blur(10px);}
-.topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--green);letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
-.topbar-brand-ico{width:28px;height:28px;background:linear-gradient(135deg,var(--green),var(--blue));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#000;flex-shrink:0;}
-.topbar-hburg{display:none;background:none;border:none;color:var(--muted);cursor:pointer;padding:7px;border-radius:6px;font-size:15px;}
+.topbar-dlp{position:fixed;top:0;left:0;right:0;height:var(--tb);background:linear-gradient(135deg,#1a6fef 0%,#1452c8 55%,#0e3da6 100%);border-bottom:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;padding:0 18px;z-index:1100;gap:10px;}
+.topbar-brand{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:13px;color:#fff;letter-spacing:2px;white-space:nowrap;flex-shrink:0;}
+.topbar-brand-ico{width:28px;height:28px;background:rgba(255,255,255,0.18);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;flex-shrink:0;border:1px solid rgba(255,255,255,0.25);}
+.topbar-hburg{display:none;background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;padding:7px;border-radius:6px;font-size:15px;}
 .topbar-mid{flex:1;display:flex;align-items:center;padding:0 14px;}
-.topbar-bc{font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:5px;}
-.topbar-bc .bc-cur{color:var(--green);}
+.topbar-bc{font-size:11px;color:rgba(255,255,255,0.6);font-family:'Share Tech Mono',monospace;display:flex;align-items:center;gap:5px;}
+.topbar-bc .bc-cur{color:#fff;}
 .topbar-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.topbar-ib{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 9px;border-radius:6px;font-size:13px;transition:all .15s;}
-.topbar-ib:hover{background:rgba(0,255,136,0.06);color:var(--green);}
-.topbar-uchip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;background:var(--surface);border:1px solid var(--border);border-radius:100px;cursor:pointer;transition:border-color .18s;}
-.topbar-uchip:hover{border-color:rgba(0,255,136,0.4);}
-.topbar-ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--blue));color:#000;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
-.topbar-uname{font-size:11px;font-weight:600;color:var(--text);}
-.topbar-urole{font-size:9px;color:var(--muted);}
-.topbar-timer-badge{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--yellow);letter-spacing:1px;display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid rgba(255,204,0,0.25);border-radius:100px;background:rgba(255,204,0,0.05);}
+.topbar-ib{background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;padding:6px 9px;border-radius:6px;font-size:13px;transition:all .15s;}
+.topbar-ib:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.topbar-uchip{display:flex;align-items:center;gap:7px;padding:3px 10px 3px 4px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:100px;cursor:pointer;transition:border-color .18s;}
+.topbar-uchip:hover{border-color:rgba(255,255,255,0.4);}
+.topbar-ava{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.25);color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Share Tech Mono',monospace;}
+.topbar-uname{font-size:11px;font-weight:600;color:#fff;}
+.topbar-urole{font-size:9px;color:rgba(255,255,255,0.6);}
+.topbar-timer-badge{font-family:'Share Tech Mono',monospace;font-size:10px;color:rgba(255,255,255,0.9);letter-spacing:1px;display:flex;align-items:center;gap:5px;padding:3px 10px;border:1px solid rgba(255,255,255,0.25);border-radius:100px;background:rgba(255,255,255,0.1);}
 
 /* Sidebar */
-.sidebar-dlp{position:fixed;left:0;top:var(--tb);bottom:0;width:var(--sb);background:rgba(8,8,14,0.98);border-right:1px solid var(--border);overflow-y:auto;z-index:1000;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);}
+.sidebar-dlp{position:fixed;left:0;top:var(--tb);bottom:0;width:var(--sb);background:#ffffff;border-right:1px solid var(--border);overflow-y:auto;z-index:1000;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:2px 0 16px rgba(26,111,239,0.07);}
 .sidebar-dlp.hidden{transform:translateX(-100%);}
 .sidebar-dlp::-webkit-scrollbar{width:3px;}
 .sidebar-dlp::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 .slabel-dlp{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:'Share Tech Mono',monospace;padding:14px 16px 5px;}
 .nav-item-dlp{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 8px;border-radius:8px;color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .13s;position:relative;user-select:none;font-family:'Rajdhani',sans-serif;}
 .nav-item-dlp i{width:16px;text-align:center;font-size:12px;flex-shrink:0;}
-.nav-item-dlp:hover{background:rgba(0,255,136,0.06);color:var(--text);}
-.nav-item-dlp.active{background:rgba(0,255,136,0.1);color:var(--green);font-weight:700;}
-.nav-item-dlp.active::before{content:'';position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--green);border-radius:0 3px 3px 0;}
+.nav-item-dlp:hover{background:rgba(26,111,239,0.07);color:var(--text);}
+.nav-item-dlp.active{background:rgba(26,111,239,0.1);color:var(--blue);font-weight:700;}
+.nav-item-dlp.active::before{content:'';position:absolute;left:-8px;top:6px;bottom:6px;width:3px;background:var(--blue);border-radius:0 3px 3px 0;}
 .nav-badge-dlp{margin-left:auto;background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:5px;font-family:'Share Tech Mono',monospace;}
 .sidebar-footer-dlp{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
-.sfcard-dlp{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 13px;}
+.sfcard-dlp{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 13px;}
 .sfcard-lbl-dlp{font-size:9px;color:var(--muted);font-family:'Share Tech Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
 .sfcard-val-dlp{font-size:18px;font-weight:700;color:var(--yellow);font-family:'Share Tech Mono',monospace;margin-top:2px;}
 .sfcard-sub-dlp{font-size:10px;color:var(--muted);margin-top:2px;}
@@ -134,23 +134,23 @@ tr:last-child td{border-bottom:none;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
 
 /* Extend button in sidebar footer */
-.ext-btn-sf{background:transparent;border:1px solid rgba(255,204,0,0.4);color:var(--yellow);padding:4px 12px;border-radius:5px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;margin-top:7px;width:100%;letter-spacing:1px;}
-.ext-btn-sf:hover{background:rgba(255,204,0,0.08);}
+.ext-btn-sf{background:transparent;border:1px solid rgba(26,111,239,0.4);color:var(--blue);padding:4px 12px;border-radius:5px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;margin-top:7px;width:100%;letter-spacing:1px;}
+.ext-btn-sf:hover{background:rgba(26,111,239,0.08);}
 
 /* ── NOTIFICATIONS PANEL ── */
-.notif-panel{position:fixed;top:var(--tb);right:0;width:340px;max-height:calc(100vh - var(--tb));background:var(--surface);border-left:1px solid var(--border);z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(0,0,0,0.5);}
+.notif-panel{position:fixed;top:var(--tb);right:0;width:340px;max-height:calc(100vh - var(--tb));background:var(--surface);border-left:1px solid var(--border);z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 24px rgba(26,111,239,0.12);}
 .notif-panel.open{transform:translateX(0);}
-.notif-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.notif-title{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);letter-spacing:2px;}
+.notif-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2);}
+.notif-title{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--blue);letter-spacing:2px;}
 .notif-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 6px;}
 .notif-close:hover{color:var(--red);}
 .notif-list{flex:1;overflow-y:auto;padding:8px 0;}
 .notif-list::-webkit-scrollbar{width:3px;}
 .notif-list::-webkit-scrollbar-thumb{background:var(--border);}
-.notif-item{padding:10px 16px;border-bottom:1px solid rgba(26,26,46,0.5);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;}
-.notif-item:hover{background:rgba(0,136,255,0.04);}
-.notif-item.unread{background:rgba(0,255,136,0.03);}
-.notif-item.unread::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:6px;}
+.notif-item{padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;gap:10px;align-items:flex-start;}
+.notif-item:hover{background:rgba(26,111,239,0.04);}
+.notif-item.unread{background:rgba(26,111,239,0.04);}
+.notif-item.unread::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:6px;}
 .notif-item:not(.unread)::before{content:'';width:6px;height:6px;flex-shrink:0;}
 .notif-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 .notif-body{flex:1;min-width:0;}
@@ -159,7 +159,7 @@ tr:last-child td{border-bottom:none;}
 .notif-empty{text-align:center;padding:32px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;}
 .notif-badge{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;}
 .notif-btn-wrap{position:relative;display:inline-block;}
-.notif-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.notif-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surface2);}
 
 @media(max-width:768px){
   .topbar-hburg{display:block;}
@@ -171,20 +171,20 @@ tr:last-child td{border-bottom:none;}
 /* ── END SIDEBAR LAYOUT ──────────────────────── */
 
 /* TRAVEL MAP */
-#tr-map{height:320px;width:100%;border-radius:10px;background:#0a0a14;border:1px solid var(--border);z-index:1;}
-.map-instruction{font-family:"Share Tech Mono",monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;padding:8px 12px;background:rgba(0,136,255,0.06);border:1px solid rgba(0,136,255,0.2);border-radius:6px;}
+#tr-map{height:320px;width:100%;border-radius:10px;background:#e8eeff;border:1px solid var(--border);z-index:1;}
+.map-instruction{font-family:"Share Tech Mono",monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px;padding:8px 12px;background:rgba(26,111,239,0.06);border:1px solid rgba(26,111,239,0.2);border-radius:6px;}
 .pin-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
 .pin-box label{font-family:"Share Tech Mono",monospace;font-size:9px;letter-spacing:2px;color:var(--muted);display:block;margin-bottom:4px;}
 .pin-box .pin-val{font-size:12px;font-family:"Share Tech Mono",monospace;color:var(--text);word-break:break-all;}
-.leaflet-popup-content-wrapper{background:#0d0d15 !important;color:#c8d6e5 !important;border:1px solid #1a1a2e !important;border-radius:8px !important;font-family:"Share Tech Mono",monospace !important;font-size:11px !important;}
-.leaflet-popup-tip{background:#0d0d15 !important;}
-.session-timer-card{background:var(--surface);border:1px solid rgba(255,204,0,0.3);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
-.session-timer-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--yellow);}
+.leaflet-popup-content-wrapper{background:#ffffff !important;color:#1a2340 !important;border:1px solid #dde3f5 !important;border-radius:8px !important;font-family:"Share Tech Mono",monospace !important;font-size:11px !important;}
+.leaflet-popup-tip{background:#ffffff !important;}
+.session-timer-card{background:var(--surface);border:1px solid rgba(26,111,239,0.3);border-radius:12px;padding:18px 20px;position:relative;overflow:hidden;}
+.session-timer-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue);}
 .timer-ring{width:72px;height:72px;position:relative;margin:0 auto 8px;}
 .timer-ring svg{transform:rotate(-90deg);}
 .ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:"Share Tech Mono",monospace;font-size:14px;font-weight:700;}
 .map-suggest-item{padding:9px 14px;font-size:12px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border);font-family:Rajdhani,sans-serif;}
-.map-suggest-item:hover{background:rgba(0,136,255,0.12);color:var(--blue);}
+.map-suggest-item:hover{background:rgba(26,111,239,0.1);color:var(--blue);}
 .extend-pending{font-family:Share Tech Mono,monospace;font-size:10px;color:var(--yellow);letter-spacing:1px;text-align:center;padding:5px 0;}
 
 /* ══════════════════════════════════════════
@@ -198,18 +198,18 @@ tr:last-child td{border-bottom:none;}
 .fm-server-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
 .fm-server-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;transition:border-color 0.15s;}
 .fm-server-card:hover{border-color:rgba(0,136,255,0.4);}
-.fm-server-card-name{font-weight:700;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-server-card-name{font-weight:700;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fm-server-card-meta{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);}
 .fm-server-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 /* Recent files row */
 .fm-recent-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s;}
-.fm-recent-row:hover{border-color:rgba(0,136,255,0.3);}
+.fm-recent-row:hover{border-color:rgba(26,111,239,0.3);}
 .fm-recent-row-icon{font-size:22px;flex-shrink:0;}
 .fm-recent-row-info{flex:1;min-width:0;}
-.fm-recent-row-name{font-weight:600;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-recent-row-name{font-weight:600;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fm-recent-row-meta{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;}
 .fm-recent-row-actions{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;}
-.fm-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+.fm-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 12px rgba(26,111,239,0.06);}
 .fm-toolbar{background:var(--surface2);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .fm-toolbar-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
 .fm-breadcrumb{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;overflow:hidden;}
@@ -219,14 +219,14 @@ tr:last-child td{border-bottom:none;}
 .fm-breadcrumb .cur{color:var(--text);cursor:default;}
 .fm-toolbar-right{display:flex;align-items:center;gap:6px;}
 .fm-view-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--muted);cursor:pointer;font-size:13px;transition:all 0.15s;}
-.fm-view-btn.active,.fm-view-btn:hover{border-color:var(--green);color:var(--green);}
+.fm-view-btn.active,.fm-view-btn:hover{border-color:var(--blue);color:var(--blue);}
 .fm-search{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;width:160px;}
-.fm-search:focus{border-color:rgba(0,136,255,0.5);}
+.fm-search:focus{border-color:rgba(26,111,239,0.5);}
 .fm-body{display:flex;min-height:360px;}
-.fm-sidebar{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:rgba(0,0,0,0.2);}
+.fm-sidebar{width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:var(--surface2);}
 .fm-sidebar-item{padding:7px 16px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s;}
-.fm-sidebar-item:hover{background:rgba(0,255,136,0.06);color:var(--text);}
-.fm-sidebar-item.active{background:rgba(0,255,136,0.1);color:var(--green);border-right:2px solid var(--green);}
+.fm-sidebar-item:hover{background:rgba(26,111,239,0.07);color:var(--text);}
+.fm-sidebar-item.active{background:rgba(26,111,239,0.1);color:var(--blue);border-right:2px solid var(--blue);}
 .fm-sidebar-item .si-icon{font-size:13px;width:16px;text-align:center;}
 .fm-main{flex:1;overflow-y:auto;padding:12px;}
 .fm-status{padding:6px 16px;border-top:1px solid var(--border);background:var(--surface2);font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;justify-content:space-between;}
@@ -234,10 +234,10 @@ tr:last-child td{border-bottom:none;}
 /* Grid view */
 .fm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
 .fm-item{border:1px solid var(--border);border-radius:8px;padding:12px 8px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative;user-select:none;}
-.fm-item:hover{border-color:rgba(0,136,255,0.4);background:rgba(0,136,255,0.05);}
-.fm-item.selected{border-color:var(--blue);background:rgba(0,136,255,0.12);}
+.fm-item:hover{border-color:rgba(26,111,239,0.4);background:rgba(26,111,239,0.05);}
+.fm-item.selected{border-color:var(--blue);background:rgba(26,111,239,0.1);}
 .fm-item.fm-folder{cursor:pointer;}
-.fm-item.fm-folder:hover{border-color:rgba(255,204,0,0.4);background:rgba(255,204,0,0.05);}
+.fm-item.fm-folder:hover{border-color:rgba(224,138,0,0.4);background:rgba(224,138,0,0.05);}
 .fm-item-icon{font-size:28px;margin-bottom:6px;display:block;}
 .fm-item-name{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
 .fm-item-size{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);margin-top:2px;}
@@ -246,18 +246,18 @@ tr:last-child td{border-bottom:none;}
 /* List view */
 .fm-list{width:100%;}
 .fm-list-row{display:flex;align-items:center;padding:7px 10px;border-radius:6px;cursor:pointer;gap:10px;transition:background 0.1s;}
-.fm-list-row:hover{background:rgba(0,136,255,0.07);}
-.fm-list-row.selected{background:rgba(0,136,255,0.14);}
+.fm-list-row:hover{background:rgba(26,111,239,0.07);}
+.fm-list-row.selected{background:rgba(26,111,239,0.12);}
 .fm-list-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
-.fm-list-name{flex:1;font-size:13px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-list-name{flex:1;font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fm-list-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:80px;text-align:right;flex-shrink:0;}
 .fm-list-date{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);width:120px;text-align:right;flex-shrink:0;}
 
 /* Context menu */
-.fm-ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:9999;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.5);display:none;}
+.fm-ctx-menu{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;z-index:9999;min-width:160px;box-shadow:0 8px 24px rgba(26,111,239,0.15);display:none;}
 .fm-ctx-item{padding:8px 16px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;}
-.fm-ctx-item:hover{background:rgba(0,136,255,0.1);color:var(--blue);}
-.fm-ctx-item.danger:hover{background:rgba(255,51,102,0.1);color:var(--red);}
+.fm-ctx-item:hover{background:rgba(26,111,239,0.1);color:var(--blue);}
+.fm-ctx-item.danger:hover{background:rgba(224,37,58,0.1);color:var(--red);}
 .fm-ctx-sep{height:1px;background:var(--border);margin:4px 0;}
 
 /* New folder / rename input */
@@ -265,76 +265,76 @@ tr:last-child td{border-bottom:none;}
 
 /* Upload drop zone */
 .fm-dropzone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;transition:all 0.2s;cursor:pointer;}
-.fm-dropzone.drag-over{border-color:var(--green);background:rgba(0,255,136,0.04);}
+.fm-dropzone.drag-over{border-color:var(--blue);background:rgba(26,111,239,0.04);}
 .fm-dropzone-icon{font-size:36px;margin-bottom:8px;}
 .fm-dropzone-txt{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:1px;}
 .fm-dropzone-sub{font-size:11px;color:var(--muted);margin-top:4px;}
 
 /* Save-to modal */
 .save-tree-item{padding:6px 12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:8px;border-radius:6px;transition:background 0.1s;}
-.save-tree-item:hover{background:rgba(0,136,255,0.1);}
-.save-tree-item.selected{background:rgba(0,136,255,0.18);color:var(--blue);}
+.save-tree-item:hover{background:rgba(26,111,239,0.1);}
+.save-tree-item.selected{background:rgba(26,111,239,0.18);color:var(--blue);}
 .save-tree-indent{display:inline-block;}
 
 /* Travel history */
 .tr-hist-row{display:flex;flex-direction:column;gap:6px;padding:14px 0;border-bottom:1px solid rgba(26,26,46,0.6);}
 .tr-hist-row:last-child{border-bottom:none;}
 .tr-hist-header{display:flex;justify-content:space-between;align-items:center;}
-.tr-hist-route{font-size:14px;font-weight:700;color:#fff;}
+.tr-hist-route{font-size:14px;font-weight:700;color:var(--text);}
 .tr-hist-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;}
 .tr-hist-meta span{display:flex;align-items:center;gap:4px;}
 .fm-shared-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:7px;transition:border-color 0.2s;overflow:hidden;}
-.fm-shared-card:hover{border-color:rgba(0,255,136,0.3);}
-.fm-shared-name{font-size:13px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fm-shared-card:hover{border-color:rgba(26,111,239,0.3);}
+.fm-shared-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fm-shared-meta{font-family:"Share Tech Mono",monospace;font-size:10px;color:var(--muted);}
 .fm-shared-actions{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;}
 
 /* ── TEAMMATE THEME ADDITIONS ─────────────────── */
 :root {
-  --bg2:#0d0d17;--bg3:#0a0a12;
-  --surface3:#151525;
-  --accent:#0088ff;--accent2:#0066cc;--accent3:#3399ff;
-  --ok:#00cc77;--ok2:#009955;
-  --warn:#ffaa00;--warn2:#cc8800;
-  --err:#ff3366;--err2:#cc1144;
-  --text2:#7a8a9a;--text3:#3a4a5a;
+  --bg2:#f5f7ff;--bg3:#eef2ff;
+  --surface3:#ffffff;
+  --accent:#1a6fef;--accent2:#1452c8;--accent3:#4a8fff;
+  --ok:#0f9e6e;--ok2:#0b8560;
+  --warn:#e08a00;--warn2:#b86e00;
+  --err:#e0253a;--err2:#b81e2f;
+  --text2:#6b7fa8;--text3:#a0b0cc;
   --mono:'JetBrains Mono','Share Tech Mono',monospace;
   --sans:'DM Sans','Rajdhani',sans-serif;
   --r:6px;--r2:10px;
-  --shadow:0 4px 24px rgba(0,136,255,.15);
+  --shadow:0 4px 24px rgba(26,111,239,.12);
 }
 
 /* Teammate pill badges */
 .pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;font-size:9px;font-weight:700;font-family:var(--mono);text-transform:uppercase;letter-spacing:.03em;}
-.pill-ok{background:rgba(0,204,119,.12);color:#00cc77;border:1px solid rgba(0,204,119,.3);}
-.pill-warn{background:rgba(255,170,0,.12);color:#ffaa00;border:1px solid rgba(255,170,0,.3);}
-.pill-err{background:rgba(255,51,102,.12);color:#ff3366;border:1px solid rgba(255,51,102,.3);}
-.pill-info{background:rgba(0,136,255,.12);color:#0088ff;border:1px solid rgba(0,136,255,.3);}
-.pill-gray{background:rgba(74,84,96,.2);color:#7a8a9a;border:1px solid rgba(74,84,96,.3);}
-.pill-purple{background:rgba(136,68,255,.12);color:#8844ff;border:1px solid rgba(136,68,255,.3);}
+.pill-ok{background:rgba(15,158,110,.12);color:#0b8560;border:1px solid rgba(15,158,110,.3);}
+.pill-warn{background:rgba(224,138,0,.12);color:#c07800;border:1px solid rgba(224,138,0,.3);}
+.pill-err{background:rgba(224,37,58,.12);color:#e0253a;border:1px solid rgba(224,37,58,.3);}
+.pill-info{background:rgba(26,111,239,.12);color:#1a6fef;border:1px solid rgba(26,111,239,.3);}
+.pill-gray{background:rgba(107,127,168,.15);color:#6b7fa8;border:1px solid rgba(107,127,168,.3);}
+.pill-purple{background:rgba(136,68,255,.12);color:#7733ee;border:1px solid rgba(136,68,255,.3);}
 
 /* Alert boxes */
 .al{padding:10px 14px;border-radius:var(--r);margin-bottom:10px;display:flex;gap:9px;align-items:flex-start;font-size:12px;border-left:3px solid;line-height:1.6;}
 .al i{flex-shrink:0;margin-top:1px;}
-.al-danger{background:rgba(255,51,102,.07);border-color:var(--red);color:#ff6688;}
-.al-warning{background:rgba(255,204,0,.07);border-color:var(--yellow);color:#ffcc44;}
-.al-info{background:rgba(0,136,255,.07);border-color:var(--blue);color:#4499ff;}
-.al-success{background:rgba(0,255,136,.07);border-color:var(--green);color:#44ffaa;}
+.al-danger{background:rgba(224,37,58,.07);border-color:var(--red);color:#b81e2f;}
+.al-warning{background:rgba(224,138,0,.07);border-color:#e08a00;color:#b86e00;}
+.al-info{background:rgba(26,111,239,.07);border-color:var(--blue);color:#1452c8;}
+.al-success{background:rgba(15,158,110,.07);border-color:var(--green);color:#0b8560;}
 
 /* Teammate buttons */
 .btn-primary{background:var(--blue);color:#fff;border:1px solid var(--blue);}
-.btn-primary:hover{background:#0066cc;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,136,255,.3);}
-.btn-ok-t{background:var(--green);color:#000;border:1px solid var(--green);}
-.btn-ok-t:hover{background:#00cc66;}
+.btn-primary:hover{background:#1452c8;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,111,239,.3);}
+.btn-ok-t{background:var(--green);color:#fff;border:1px solid var(--green);}
+.btn-ok-t:hover{background:#0b8560;}
 .btn-ghost-t{background:transparent;color:var(--muted);border:1px solid var(--border);}
-.btn-ghost-t:hover{border-color:var(--blue);color:var(--blue);background:rgba(0,136,255,.06);}
+.btn-ghost-t:hover{border-color:var(--blue);color:var(--blue);background:rgba(26,111,239,.06);}
 .btn-sm-t{padding:4px 10px;font-size:10px;}
 
 /* Form controls (teammate style) */
 .fl{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;font-family:var(--mono);}
 .fg-t{margin-bottom:13px;}
 .fg-t .fc-t{width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:12px;font-family:var(--sans);transition:border-color .18s;outline:none;}
-.fg-t .fc-t:focus{border-color:rgba(0,136,255,.5);box-shadow:0 0 0 3px rgba(0,136,255,.08);}
+.fg-t .fc-t:focus{border-color:rgba(26,111,239,.5);box-shadow:0 0 0 3px rgba(26,111,239,.08);}
 .fg-t .fc-t::placeholder{color:var(--muted);}
 textarea.fc-t{resize:vertical;min-height:80px;line-height:1.6;}
 select.fc-t{cursor:pointer;}
@@ -342,8 +342,8 @@ select.fc-t{cursor:pointer;}
 
 /* Tags input */
 .tags-box-t{min-height:38px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-wrap:wrap;gap:3px;align-items:center;cursor:text;transition:border-color .18s;}
-.tags-box-t:focus-within{border-color:rgba(0,136,255,.5);}
-.tag-t{display:inline-flex;align-items:center;gap:3px;background:rgba(0,136,255,.15);color:#4499ff;padding:2px 6px 2px 8px;border-radius:100px;font-size:10px;}
+.tags-box-t:focus-within{border-color:rgba(26,111,239,.5);}
+.tag-t{display:inline-flex;align-items:center;gap:3px;background:rgba(26,111,239,.15);color:#1a6fef;padding:2px 6px 2px 8px;border-radius:100px;font-size:10px;}
 .tag-t button{background:none;border:none;color:inherit;cursor:pointer;padding:0;font-size:12px;opacity:.6;}
 .tag-t button:hover{opacity:1;color:var(--red);}
 .tags-input-t{border:none;outline:none;font-size:11px;background:transparent;color:var(--text);flex:1;min-width:140px;padding:2px 4px;font-family:var(--sans);}
@@ -357,47 +357,47 @@ select.fc-t{cursor:pointer;}
 /* Compliance card styles */
 .sec-grid-t{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;}
 .sec-item-t{padding:11px 13px;border-radius:var(--r);border-left:3px solid;display:flex;align-items:flex-start;gap:9px;font-size:11px;}
-.sec-item-t.ok{background:rgba(0,255,136,.05);border-color:var(--green);}
-.sec-item-t.warn{background:rgba(255,204,0,.05);border-color:var(--yellow);}
-.sec-item-t.bad{background:rgba(255,51,102,.05);border-color:var(--red);}
+.sec-item-t.ok{background:rgba(15,158,110,.06);border-color:var(--green);}
+.sec-item-t.warn{background:rgba(224,138,0,.06);border-color:var(--yellow);}
+.sec-item-t.bad{background:rgba(224,37,58,.06);border-color:var(--red);}
 .sec-item-t i{font-size:14px;flex-shrink:0;margin-top:1px;}
 .sec-item-t.ok i{color:var(--green);}
 .sec-item-t.warn i{color:var(--yellow);}
 .sec-item-t.bad i{color:var(--red);}
-.sec-lbl-t{font-weight:700;font-size:11px;color:#fff;}
+.sec-lbl-t{font-weight:700;font-size:11px;color:var(--text);}
 .sec-desc-t{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.5;}
 
 /* Stats grid */
 .sg-t{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
 .sc-t{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:15px;}
 .sc-icon-t{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:9px;}
-.sc-val-t{font-size:22px;font-weight:700;font-family:var(--mono);color:#fff;}
+.sc-val-t{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--text);}
 .sc-lbl-t{font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--mono);}
 
 /* Compliance data table */
 .dt-t{width:100%;border-collapse:collapse;font-size:11px;}
 .dt-t th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--border);font-family:var(--mono);}
-.dt-t td{padding:9px 12px;border-bottom:1px solid rgba(26,26,46,.5);color:var(--text);vertical-align:top;}
-.dt-t tr:hover td{background:rgba(0,136,255,.03);}
+.dt-t td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top;}
+.dt-t tr:hover td{background:rgba(26,111,239,.03);}
 
 /* FAQ accordion */
 .faq-t{border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden;}
 .faq-q-t{padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:600;background:var(--surface2);color:var(--text);transition:background .15s;gap:10px;}
-.faq-q-t:hover{background:rgba(0,136,255,.06);}
-.faq-q-t.open{background:rgba(0,136,255,.08);color:#4499ff;}
+.faq-q-t:hover{background:rgba(26,111,239,.06);}
+.faq-q-t.open{background:rgba(26,111,239,.08);color:#1a6fef;}
 .faq-a-t{display:none;padding:12px 14px;font-size:11px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);}
 .faq-a-t.open{display:block;}
 
 /* Audit log item */
-.ai-t{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid rgba(26,26,46,.5);}
+.ai-t{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);}
 .ai-t:last-child{border-bottom:none;}
 .ai-ico-t{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
-.ai-title-t{font-size:11px;font-weight:700;font-family:var(--mono);color:#fff;}
+.ai-title-t{font-size:11px;font-weight:700;font-family:var(--mono);color:var(--text);}
 .ai-desc-t{font-size:10px;color:var(--muted);margin-top:2px;}
 .ai-time-t{font-size:9px;color:var(--text3);margin-top:2px;font-family:var(--mono);}
 
 /* DLP issue badge */
-.dlp-issue-t{background:rgba(255,51,102,.1);border:1px solid rgba(255,51,102,.25);color:#ff6688;border-radius:var(--r);padding:3px 8px;font-size:10px;font-family:var(--mono);display:inline-block;margin:2px;}
+.dlp-issue-t{background:rgba(224,37,58,.1);border:1px solid rgba(224,37,58,.25);color:#e0253a;border-radius:var(--r);padding:3px 8px;font-size:10px;font-family:var(--mono);display:inline-block;margin:2px;}
 
 /* Ticket card */
 .ticket-card-t{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;}
@@ -410,7 +410,7 @@ select.fc-t{cursor:pointer;}
 
 /* Section header */
 .ph-t{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
-.ph-title-t{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;color:#fff;font-family:var(--sans);}
+.ph-title-t{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;color:var(--text);font-family:var(--sans);}
 .ph-title-t i{color:var(--blue);}
 /* ── END TEAMMATE ADDITIONS ──────────────────── */
 </style>
@@ -482,14 +482,13 @@ select.fc-t{cursor:pointer;}
 
   <div class="slabel-dlp">Communication</div>
   <div class="nav-item-dlp" onclick="showPanel('email')" data-p="email"><i class="fas fa-envelope"></i> Email Composer</div>
-  <div class="nav-item-dlp" onclick="showPanel('cloud')" data-p="cloud"><i class="fas fa-cloud-arrow-up"></i> Cloud Upload</div>
   <div class="nav-item-dlp" onclick="showPanel('requests')" data-p="requests"><i class="fas fa-clipboard-list"></i> Access Requests</div>
 
   <div class="slabel-dlp">Travel</div>
   <div class="nav-item-dlp" onclick="showPanel('travel')" data-p="travel"><i class="fas fa-plane"></i> Travel Request</div>
 
-  <div class="slabel-dlp">Compliance</div>
-  <div class="nav-item-dlp" onclick="showPanel('compliance')" data-p="compliance"><i class="fas fa-shield-alt"></i> Compliance Centre</div>
+  <div class="slabel-dlp">Audit Logs</div>
+  <div class="nav-item-dlp" onclick="showPanel('auditlogs')" data-p="auditlogs"><i class="fas fa-list-check"></i> Audit Logs</div>
 
   <div class="slabel-dlp">Meetings</div>
   <div class="nav-item-dlp" onclick="showPanel('clients')" data-p="clients"><i class="fas fa-address-book"></i> My Clients</div>
@@ -507,7 +506,7 @@ select.fc-t{cursor:pointer;}
 
 <!-- SESSION EXPIRED -->
 <div id="sess-expired" class="overlay" style="flex-direction:column;">
-  <div style="text-align:center;padding:40px;background:#0d0d15;border:1px solid rgba(255,204,0,0.3);border-radius:16px;max-width:360px;">
+  <div style="text-align:center;padding:40px;background:#ffffff;border:1px solid rgba(26,111,239,0.3);border-radius:16px;max-width:360px;box-shadow:0 24px 64px rgba(26,111,239,0.15);">
     <div style="font-size:48px;margin-bottom:16px;">⏱</div>
     <div style="font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--yellow);letter-spacing:2px;margin-bottom:12px;">SESSION EXPIRED</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:24px;">Timed out due to inactivity.</div>
@@ -517,10 +516,10 @@ select.fc-t{cursor:pointer;}
 
 <!-- SECURITY ALERT -->
 <div id="sec-overlay" class="overlay" style="flex-direction:column;">
-  <div style="background:#0d0d15;border-radius:16px;padding:36px 40px;max-width:440px;width:90%;border:2px solid rgba(255,51,102,0.5);text-align:center;">
+  <div style="background:#ffffff;border-radius:16px;padding:36px 40px;max-width:440px;width:90%;border:2px solid rgba(224,37,58,0.4);text-align:center;box-shadow:0 24px 64px rgba(224,37,58,0.15);">
     <div style="font-size:44px;margin-bottom:16px;">⛔</div>
     <div id="sec-title" style="font-family:'Share Tech Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;margin-bottom:14px;color:var(--red);">ALERT</div>
-    <div id="sec-msg" style="font-size:13px;color:#c8d6e5;line-height:1.7;white-space:pre-line;margin-bottom:24px;"></div>
+    <div id="sec-msg" style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-line;margin-bottom:24px;"></div>
     <button class="btn btn-r" onclick="document.getElementById('sec-overlay').style.display='none'">ACKNOWLEDGE</button>
   </div>
 </div>
@@ -610,7 +609,7 @@ select.fc-t{cursor:pointer;}
     </div>
     <div style="display:flex;height:360px;overflow:hidden;">
       <!-- sidebar -->
-      <div style="width:150px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 0;background:rgba(0,0,0,0.2);overflow-y:auto;">
+      <div style="width:150px;flex-shrink:0;border-right:1px solid var(--border);padding:8px 0;background:var(--surface2);overflow-y:auto;">
         <div class="fm-sidebar-item" onclick="clPickerNavTo('')" id="clpk-home" style="padding:6px 12px;font-size:10px;"><span class="si-icon">🏠</span>HOME</div>
         <div class="fm-sidebar-item" onclick="clPickerNavTo('Documents')" style="padding:6px 12px;font-size:10px;"><span class="si-icon">📄</span>DOCUMENTS</div>
         <div class="fm-sidebar-item" onclick="clPickerNavTo('Images')" style="padding:6px 12px;font-size:10px;"><span class="si-icon">🖼</span>IMAGES</div>
@@ -675,11 +674,6 @@ select.fc-t{cursor:pointer;}
         <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;">SCREENSHOT</div>
         <div style="font-size:13px;color:var(--green);">BLOCKED</div>
       </div>
-    </div>
-    <div class="sec-title">Recent Activity</div>
-    <div class="card" style="padding:0;overflow:hidden;">
-      <table><thead><tr><th>Time</th><th>Event</th><th>Detail</th><th>Risk</th></tr></thead>
-      <tbody id="ov-log"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody></table>
     </div>
   </div>
 
@@ -803,13 +797,25 @@ select.fc-t{cursor:pointer;}
     </div>
 
     <!-- Double-click context menu for files -->
-    <div id="fm-file-menu" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;">
+    <div id="fm-file-menu" style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:200px;box-shadow:0 8px 32px rgba(26,111,239,0.15);z-index:9999;overflow:hidden;">
       <div style="padding:10px 16px;border-bottom:1px solid var(--border);background:var(--surface2);">
         <div id="fm-file-menu-name" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px;"></div>
       </div>
       <div id="fm-file-menu-items" style="padding:4px 0;"></div>
     </div>
 
+  </div>
+
+  <!-- AUDIT LOGS -->
+  <div class="section-dlp" id="panel-auditlogs">
+    <div class="ph-t" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--green);letter-spacing:2px;display:flex;align-items:center;gap:10px;"><i class="fas fa-list-check"></i> Audit Logs</div>
+      <button class="btn btn-ghost-t btn-sm-t" onclick="loadAuditLogs()"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <table><thead><tr><th>Time</th><th>Event</th><th>Detail</th><th>Risk</th></tr></thead>
+      <tbody id="audit-log-body"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody></table>
+    </div>
   </div>
 
   <!-- REQUESTS -->
@@ -830,13 +836,13 @@ select.fc-t{cursor:pointer;}
       <div class="map-instruction">📍 CLICK ONCE = set SOURCE &nbsp;|&nbsp; CLICK TWICE = set DESTINATION &nbsp;|&nbsp; Click again to reset</div>
       <div style="position:relative;margin-bottom:8px;display:flex;gap:8px;">
         <input type="text" id="map-search-input" placeholder="🔍 Search a place (e.g. Pillaichavady, Puducherry)..."
-          style="flex:1;background:#0d0d1a;border:1px solid var(--border);border-radius:8px;padding:9px 14px;
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 14px;
                  color:var(--text);font-family:Rajdhani,sans-serif;font-size:13px;outline:none;"
           onkeydown="if(event.key==='Enter')searchMapPlace()"
           oninput="onMapSearchInput(this.value)">
         <button onclick="searchMapPlace()" style="background:var(--blue);border:none;border-radius:8px;padding:9px 16px;
-                color:#fff;font-family:Share Tech Mono,monospace;font-size:11px;cursor:pointer;letter-spacing:1px;">SEARCH</button>
-        <div id="map-suggestions" style="position:absolute;top:42px;left:0;right:60px;background:#0d0d1a;border:1px solid var(--border);
+                color:#fff;font-family:Share Tech Mono,monospace;font-size:11px;cursor:pointer;letter-spacing:1px;border-radius:8px;">SEARCH</button>
+        <div id="map-suggestions" style="position:absolute;top:42px;left:0;right:60px;background:var(--surface);border:1px solid var(--border);
              border-radius:8px;z-index:9999;display:none;max-height:200px;overflow-y:auto;"></div>
       </div>
       <div id="tr-map"></div>
@@ -910,11 +916,11 @@ select.fc-t{cursor:pointer;}
     <div style="display:flex;gap:0;min-height:calc(100vh - 140px);background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
 
       <!-- ── LEFT SIDEBAR ── -->
-      <div id="em-sidebar" style="width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:rgba(0,0,0,0.25);display:flex;flex-direction:column;gap:2px;">
+      <div id="em-sidebar" style="width:180px;flex-shrink:0;border-right:1px solid var(--border);padding:12px 0;background:var(--surface2);display:flex;flex-direction:column;gap:2px;">
 
         <!-- Compose button -->
         <div style="padding:8px 12px 14px;">
-          <button onclick="emOpenCompose()" style="width:100%;background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,136,255,0.15));border:1px solid rgba(0,255,136,0.4);color:var(--green);padding:10px 0;border-radius:20px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .18s;">
+          <button onclick="emOpenCompose()" style="width:100%;background:linear-gradient(135deg,rgba(26,111,239,0.12),rgba(20,82,200,0.12));border:1px solid rgba(26,111,239,0.4);color:var(--blue);padding:10px 0;border-radius:20px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .18s;">
             <i class="fas fa-pen"></i> Compose
           </button>
         </div>
@@ -933,7 +939,7 @@ select.fc-t{cursor:pointer;}
 
         <div style="height:1px;background:var(--border);margin:8px 12px;"></div>
         <div style="padding:4px 16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">DLP ACTIVE</div>
-        <div style="padding:4px 16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,136,0.5);">● Monitored</div>
+        <div style="padding:4px 16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(15,158,110,0.7);">● Monitored</div>
       </div>
 
       <!-- ── MAIN CONTENT ── -->
@@ -965,7 +971,7 @@ select.fc-t{cursor:pointer;}
             <button onclick="emCloseThread()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px;" title="Back">
               <i class="fas fa-arrow-left"></i>
             </button>
-            <div id="em-thread-subject" style="font-size:16px;font-weight:700;color:#fff;flex:1;"></div>
+            <div id="em-thread-subject" style="font-size:16px;font-weight:700;color:var(--text);flex:1;"></div>
             <div id="em-thread-actions" style="display:flex;gap:6px;"></div>
           </div>
           <!-- Thread messages -->
@@ -1025,10 +1031,9 @@ select.fc-t{cursor:pointer;}
         <textarea id="em-body" rows="8"
           style="width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;padding:12px 14px;resize:vertical;line-height:1.7;"
           placeholder="Compose email…"></textarea>
-        <!-- Attachments (Employee only) -->
+        <!-- Attachments -->
         <div id="em-attach-row" style="padding:6px 14px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <button onclick="document.getElementById('em-attach-input').click()" style="background:transparent;border:1px solid rgba(0,136,255,0.4);color:var(--blue);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;display:flex;align-items:center;gap:5px;"><i class="fas fa-paperclip"></i> ATTACH</button>
-          <input type="file" id="em-attach-input" multiple accept=".pdf,.docx,.xlsx,.csv,.txt,.pptx,.png,.jpg,.jpeg" style="display:none;" onchange="emHandleAttach(this.files)">
+          <button onclick="emOpenAttachPicker()" style="background:transparent;border:1px solid rgba(0,136,255,0.4);color:var(--blue);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;"><i class="fas fa-paperclip"></i> ATTACH</button>
           <div id="em-attach-list" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-height:22px;"></div>
         </div>
         <!-- Footer -->
@@ -1044,186 +1049,6 @@ select.fc-t{cursor:pointer;}
       </div>
     </div>
 
-  </div>
-
-
-  <!-- ══════════════════════════════════════════
-       CLOUD UPLOAD TAB
-  ══════════════════════════════════════════ -->
-  <div class="section-dlp" id="panel-cloud">
-    <div class="ph-t">
-      <div class="ph-title-t"><i class="fas fa-cloud-arrow-up"></i> Cloud Upload</div>
-      <span class="pill pill-err">DLP Enforced</span>
-    </div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:6px;">
-        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;"><i class="fas fa-cloud" style="color:var(--blue);"></i> Upload to Google Drive (DLP Monitored)</div>
-        <span id="cloudRoleBadge" class="pill pill-gray" style="font-size:9px;">Employee</span>
-      </div>
-      <div id="cloudRoleNotice"></div>
-      <div class="fg-t">
-        <label class="fl">Destination Folder</label>
-        <select class="fc-t" id="cl-folder" onchange="clCheckFolder()">
-          <optgroup label="Allowed — No Approval Needed">
-            <option value="Public_Docs">Public_Docs</option>
-            <option value="Reports">Reports</option>
-            <option value="Shared_Data">Shared_Data</option>
-          </optgroup>
-          <optgroup label="Restricted — Manager Approval Required">
-            <option value="Confidential">Confidential</option>
-            <option value="Private_Data">Private_Data</option>
-            <option value="Sensitive_Projects">Sensitive_Projects</option>
-          </optgroup>
-        </select>
-        <div id="cl-folderWarn" class="al al-warning folder-warn-t"><i class="fas fa-lock"></i><div><strong>Restricted Folder</strong> — Manager approval ticket will be raised. 48hr SLA.</div></div>
-      </div>
-      <div class="fg-t">
-        <label class="fl">Select Files from File Manager</label>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button onclick="clOpenFMPicker()" style="background:transparent;border:1px solid var(--blue);color:var(--blue);padding:7px 16px;border-radius:7px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;display:flex;align-items:center;gap:6px;"><i class="fas fa-folder-open"></i> BROWSE FILE MANAGER</button>
-          <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);" id="cl-fmPickerHint">No files selected</span>
-        </div>
-        <div class="fhint-t" id="cl-fileLimitHint">Max 2 files, 10MB each — DLP scanned · Select from your File Manager</div>
-      </div>
-      <div id="cl-fileList" style="margin-bottom:9px;"></div>
-      <div id="cl-dlpRes" style="margin-bottom:9px;"></div>
-      <div id="cl-prog" style="display:none;">
-        <div class="prog-wrap-t">
-          <div class="prog-head-t"><span id="cl-progLbl">Uploading…</span><span id="cl-progPct">0%</span></div>
-          <div class="prog-track-t"><div class="prog-fill-t" id="cl-progBar" style="width:0%"></div></div>
-          <div style="font-size:9px;color:var(--muted);margin-top:3px;font-family:var(--mono);" id="cl-progSt">Initialising…</div>
-        </div>
-      </div>
-      <button class="btn btn-ok-t btn-sm-t" id="cl-uploadBtn" onclick="clUpload()"><i class="fas fa-cloud-arrow-up"></i> Upload to Google Drive</button>
-      <div id="cl-msg" class="msg" style="margin-top:10px;"></div>
-    </div>
-    <div class="card" style="margin-top:14px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;"><i class="fas fa-circle-info" style="color:var(--blue);"></i> UPLOAD POLICY</div>
-      <div class="al al-info"><i class="fas fa-circle-info"></i><div>All uploads are DLP-scanned server-side for sensitive data (PII, credentials, classified content). Files with violations are blocked and logged. Restricted folders require manager sign-off within 48 hours.</div></div>
-      <div class="sec-grid-t">
-        <div class="sec-item-t ok"><i class="fas fa-check-circle"></i><div><div class="sec-lbl-t">Public_Docs / Reports / Shared_Data</div><div class="sec-desc-t">Allowed without approval for Employee role</div></div></div>
-        <div class="sec-item-t warn"><i class="fas fa-lock"></i><div><div class="sec-lbl-t">Confidential / Private_Data / Sensitive_Projects</div><div class="sec-desc-t">Requires manager approval — 48hr SLA</div></div></div>
-        <div class="sec-item-t bad"><i class="fas fa-ban"></i><div><div class="sec-lbl-t">Blocked File Types</div><div class="sec-desc-t">.exe .bat .zip .rar .sql .db .key .dll .sh .cmd are blocked</div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       COMPLIANCE TAB  (Security + Logs + GDPR + Disputes)
-  ══════════════════════════════════════════ -->
-  <div class="section-dlp" id="panel-compliance">
-    <div class="ph-t">
-      <div class="ph-title-t"><i class="fas fa-shield-alt"></i> Compliance Centre</div>
-      <button class="btn btn-ghost-t btn-sm-t" onclick="compRunSecCheck()"><i class="fas fa-rotate"></i> Refresh</button>
-    </div>
-
-    <!-- Stats row -->
-    <div class="sg-t">
-      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(0,255,136,.12);color:var(--green);"><i class="fas fa-shield-check"></i></div><div class="sc-val-t" id="comp-overallVal" style="color:var(--green);">--</div><div class="sc-lbl-t">Overall Status</div></div>
-      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(255,51,102,.12);color:var(--red);"><i class="fas fa-triangle-exclamation"></i></div><div class="sc-val-t" id="comp-viols">0</div><div class="sc-lbl-t">Violations (Session)</div></div>
-      <div class="sc-t"><div class="sc-icon-t" style="background:rgba(0,136,255,.12);color:var(--blue);"><i class="fas fa-bell"></i></div><div class="sc-val-t" id="comp-alerts">0</div><div class="sc-lbl-t">Alerts Logged</div></div>
-      <div class="sc-t">
-        <div class="sc-icon-t" style="background:rgba(255,204,0,.12);color:var(--yellow);"><i class="fas fa-clock"></i></div>
-        <div style="font-size:16px;font-weight:700;font-family:var(--mono);color:#fff;" id="comp-score">--</div>
-        <div class="sc-lbl-t">Compliance Score</div>
-      </div>
-    </div>
-
-    <!-- Active Controls -->
-    <div class="card" style="margin-bottom:13px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;"><span><i class="fas fa-gears" style="color:var(--blue);"></i> ACTIVE SECURITY CONTROLS</span></div>
-      <div class="sec-grid-t" id="comp-secGrid"></div>
-    </div>
-
-    <!-- System Health -->
-    <div class="card" style="margin-bottom:13px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-clipboard-check" style="color:var(--blue);"></i> SYSTEM HEALTH — LIVE</div>
-      <div class="sec-grid-t" id="comp-healthGrid"></div>
-    </div>
-
-    <!-- Audit Log -->
-    <div class="card" style="margin-bottom:13px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px;">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;"><i class="fas fa-timeline" style="color:var(--blue);"></i> AUDIT LOG — <span id="comp-logCount">0 entries</span></div>
-        <div style="display:flex;gap:5px;">
-          <button class="btn btn-ghost-t btn-sm-t" onclick="compExportLogs()"><i class="fas fa-download"></i> Export CSV</button>
-          <button class="btn btn-ghost-t btn-sm-t" onclick="compRenderLogs()"><i class="fas fa-rotate"></i> Refresh</button>
-        </div>
-      </div>
-      <div class="al al-info"><i class="fas fa-circle-info"></i><div><strong>Integrity Notice:</strong> Logs are fetched live from the server-side audit database. Retention: 90 days.</div></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px;">
-        <input style="flex:1;min-width:140px;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);font-size:11px;color:var(--text);outline:none;" id="comp-lSearch" placeholder="Search logs…" oninput="compDebounceRenderLogs()">
-        <select class="fc-t" style="width:auto;" id="comp-lType" onchange="compRenderLogs()">
-          <option value="">All Types</option><option>FILE</option><option>EMAIL</option><option>CLOUD</option><option>TRANSFER</option><option>USB</option><option>SECURITY</option><option>AUTH</option><option>SESSION</option>
-        </select>
-        <select class="fc-t" style="width:auto;" id="comp-lSev" onchange="compRenderLogs()">
-          <option value="">All Severity</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
-        </select>
-      </div>
-      <div id="comp-logsContainer"></div>
-      <div id="comp-logsPag" style="display:flex;justify-content:center;gap:4px;margin-top:10px;flex-wrap:wrap;"></div>
-    </div>
-
-    <!-- GDPR & Rights -->
-    <div class="card" style="margin-bottom:13px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-scale-balanced" style="color:var(--blue);"></i> GDPR &amp; YOUR RIGHTS</div>
-      <div class="al al-info"><i class="fas fa-circle-info"></i><div>This fulfils our GDPR Article 13 transparency obligation. By using this system you have been informed of all data processing. Your rights are exercisable at any time.</div></div>
-      <div class="card" style="margin-bottom:11px;background:var(--surface2);">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;"><i class="fas fa-database" style="color:var(--blue);"></i> WHAT WE COLLECT &amp; WHY</div>
-        <div style="overflow-x:auto;">
-          <table class="dt-t">
-            <thead><tr><th>Data Type</th><th>Purpose</th><th>Retention</th><th>Legal Basis</th></tr></thead>
-            <tbody>
-              <tr><td>Login timestamps, session IDs</td><td>Authentication &amp; security</td><td>90 days</td><td>Legitimate interest</td></tr>
-              <tr><td>File access records (path, duration)</td><td>DLP &amp; compliance</td><td>90 days</td><td>Contractual obligation</td></tr>
-              <tr><td>Email metadata (to/from/CC/BCC/subject)</td><td>DLP compliance</td><td>90 days</td><td>Legitimate interest</td></tr>
-              <tr><td>Email body (scanned, not stored if clean)</td><td>PII/keyword detection</td><td>Not stored if clean; 30 days if flagged</td><td>Legitimate interest</td></tr>
-              <tr><td>Upload/transfer records with SHA-256 hash</td><td>Exfiltration prevention</td><td>90 days</td><td>Contractual obligation</td></tr>
-              <tr><td>Webcam frames (real-time only)</td><td>Phone detection during file viewing</td><td><strong style="color:var(--green);">Not stored — processed then discarded</strong></td><td>Explicit consent (browser prompt)</td></tr>
-              <tr><td>USB access tickets</td><td>Hardware control audit trail</td><td>90 days</td><td>Legitimate interest</td></tr>
-              <tr><td>Compliance score, violation count</td><td>Manager reporting</td><td>90 days</td><td>Legitimate interest</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="card" style="background:var(--surface2);">
-        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;"><i class="fas fa-user-shield" style="color:var(--blue);"></i> EXERCISE YOUR RIGHTS</div>
-        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 15 — Right of Access <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">View session logs immediately in the Audit Log section above. For the full server-side record, submit a Subject Access Request. We must respond within 30 days.</div></div>
-        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 17 — Right to Erasure <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">You may request deletion. Note: erasure may be restricted where data is required for legal compliance or an ongoing investigation.</div></div>
-        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">Article 21 — Right to Object <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">You may object to processing based on legitimate interests. Webcam objection is honoured immediately — deny camera access in the browser.</div></div>
-        <div class="faq-t"><div class="faq-q-t" onclick="gdprFaq(this)">What happens to my data when employment ends? <i class="fas fa-chevron-down" style="flex-shrink:0;"></i></div><div class="faq-a-t">Account deactivated on last day. Audit logs retained 90 days post-departure for legal/handover purposes, then securely deleted.</div></div>
-        <div style="margin-top:12px;">
-          <div class="fg-t"><label class="fl">Submit a GDPR Request</label><select class="fc-t" id="comp-gdprType"><option value="access">Article 15 — Right of Access</option><option value="erasure">Article 17 — Right to Erasure</option><option value="rectification">Article 16 — Right to Rectification</option><option value="portability">Article 20 — Data Portability</option><option value="objection">Article 21 — Right to Object</option></select></div>
-          <div class="fg-t"><label class="fl">Details</label><textarea class="fc-t" id="comp-gdprDetails" rows="3" placeholder="Describe your request in detail…"></textarea></div>
-          <button class="btn btn-primary btn-sm-t" onclick="compSubmitGdpr()"><i class="fas fa-file-circle-check"></i> Submit GDPR Request</button>
-          <div id="comp-gdprMsg" class="msg" style="margin-top:8px;"></div>
-        </div>
-        <div id="comp-gdprList" style="margin-top:14px;"></div>
-      </div>
-    </div>
-
-    <!-- Dispute Centre -->
-    <div class="card">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-flag" style="color:var(--yellow);"></i> DISPUTE CENTRE <span class="pill pill-warn" style="margin-left:6px;">Human Review · 5 Business Days</span></div>
-      <div class="al al-info"><i class="fas fa-circle-info"></i><div>Contest incorrect violations, appeal denied requests, or challenge false AI detections. All disputes reviewed by a human IT Security officer. Written response within 5 business days.</div></div>
-      <div class="fg-t"><label class="fl">Dispute Type</label>
-        <select class="fc-t" id="comp-dispType">
-          <option value="">Select type…</option>
-          <option value="false_violation">Incorrect Violation on My Record</option>
-          <option value="false_ai">False AI Detection (phone/face misidentified)</option>
-          <option value="denied_request">Appeal Denied USB / Upload Request</option>
-          <option value="access_blocked">Incorrect Access Block</option>
-          <option value="dlp_fp">DLP False Positive (legitimate content blocked)</option>
-          <option value="wrong_file">Accidental File Access — Self Reporting</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="fg-t"><label class="fl">Log Reference UUID <small style="text-transform:none;letter-spacing:0;font-weight:400;">(copy from Audit Log)</small></label><input class="fc-t" id="comp-dispRef" placeholder="e.g. a1b2c3d4-…"></div>
-      <div class="fg-t"><label class="fl">Description</label><textarea class="fc-t" id="comp-dispDesc" rows="4" placeholder="What happened, why it is incorrect, and supporting context…"></textarea></div>
-      <button class="btn btn-primary btn-sm-t" onclick="compSubmitDispute()"><i class="fas fa-flag"></i> Submit Dispute</button>
-      <div id="comp-dispMsg" class="msg" style="margin-top:8px;"></div>
-      <div id="comp-disputeList" style="margin-top:14px;"></div>
-    </div>
   </div>
 
 
@@ -1243,19 +1068,19 @@ select.fc-t{cursor:pointer;}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div>
           <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">SELECT CLIENT</div>
-          <select id="cm-client-select" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;"><option value="">— Choose client —</option></select>
+          <select id="cm-client-select" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;"><option value="">— Choose client —</option></select>
         </div>
         <div>
           <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">DATE &amp; TIME</div>
-          <input type="datetime-local" id="cm-scheduled" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+          <input type="datetime-local" id="cm-scheduled" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
         </div>
         <div>
           <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">DURATION (MIN)</div>
-          <input type="number" id="cm-duration" value="60" min="15" max="480" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+          <input type="number" id="cm-duration" value="60" min="15" max="480" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
         </div>
         <div>
           <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">AGENDA / THEME</div>
-          <input type="text" id="cm-agenda" placeholder="e.g. Q1 Review, Product Demo..." style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
+          <input type="text" id="cm-agenda" placeholder="e.g. Q1 Review, Product Demo..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
         </div>
       </div>
       <button onclick="submitClientMeetingRequest()" style="background:linear-gradient(135deg,rgba(0,136,255,.15),rgba(0,255,136,.15));border:1px solid rgba(0,136,255,.4);color:var(--blue);padding:9px 20px;border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;"><i class="fas fa-paper-plane"></i> SEND FOR APPROVAL</button>
@@ -1473,7 +1298,7 @@ function showPanel(name){
   // Update breadcrumb
   var labels = {
     overview:"Dashboard", files:"File Viewer", requests:"Access Requests",
-    travel:"Travel Request", email:"Email Composer", cloud:"Cloud Upload", compliance:"Compliance Centre"
+    travel:"Travel Request", email:"Email Composer", auditlogs:"Audit Logs"
   };
   var bc = document.getElementById("bcPage");
   if(bc) bc.textContent = labels[name] || name;
@@ -1488,8 +1313,7 @@ function showPanel(name){
   if(name==="files")       { fmInitFS(); fmRender(); fmSwitchSection('home'); loadFiles(); }
   if(name==="requests")    loadReqs();
   if(name==="travel")      { loadTravelStatus(); loadTravelHistory(); initDatePickers(); setTimeout(function(){initTravelMap();},100); }
-  if(name==="compliance")  { compRunSecCheck(); compRenderLogs(); }
-  if(name==="cloud")       clCheckFolder();
+  if(name==="auditlogs")   loadAuditLogs();
   if(name==="email")       { emLoadMailUsers(); if(!emState.currentThread){ emLoadView(); } }
 }
 
@@ -1526,12 +1350,34 @@ async function loadOvLog(){
     tb.innerHTML=logs.slice(0,8).map(function(l){
       return "<tr>"+
         "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--muted)'>"+(l.timestamp||"—")+"</td>"+
-        "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:#fff'>"+(l.event_type||"—")+"</td>"+
+        "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--blue)'>"+(l.event_type||"—")+"</td>"+
         "<td style='font-size:13px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"+(l.detail||"—")+"</td>"+
         "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:"+(l.risk_level==="HIGH"?"var(--red)":l.risk_level==="MEDIUM"?"var(--orange)":"var(--green)")+"'>"+(l.risk_level||"LOW")+"</td>"+
         "</tr>";
     }).join("");
   }catch(e){console.error("ovlog",e);}
+}
+
+async function loadAuditLogs(){
+  var tb = document.getElementById("audit-log-body");
+  if(!tb) return;
+  tb.innerHTML = "<tr><td colspan='4' class='empty'>Loading…</td></tr>";
+  try {
+    var logs = await (await apiFetch("/api/employee/my-logs")).json();
+    if(!logs || !logs.length){ tb.innerHTML="<tr><td colspan='4' class='empty'>No audit entries found.</td></tr>"; return; }
+    tb.innerHTML = logs.map(function(l){
+      var riskColor = l.risk_level==="HIGH"?"var(--red)":l.risk_level==="MEDIUM"?"var(--orange)":"var(--green)";
+      return "<tr>"+
+        "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--muted);white-space:nowrap'>"+(l.timestamp||"—")+"</td>"+
+        "<td style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--blue)'>"+(l.event_type||"—")+"</td>"+
+        "<td style='font-size:13px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>"+(l.detail||"—")+"</td>"+
+        "<td><span class='badge' style='background:"+riskColor+"22;color:"+riskColor+";border:1px solid "+riskColor+"44;'>"+(l.risk_level||"LOW")+"</span></td>"+
+        "</tr>";
+    }).join("");
+  } catch(e) {
+    tb.innerHTML = "<tr><td colspan='4' class='empty' style='color:var(--red);'>Failed to load audit logs.</td></tr>";
+    console.error("auditlogs", e);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1995,7 +1841,7 @@ function fmHomeItemDbl(e, name) {
   if (existing) existing.remove();
   var menu = document.createElement("div");
   menu.id = "fm-home-dbl-menu";
-  menu.style.cssText = "position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.6);z-index:9999;overflow:hidden;";
+  menu.style.cssText = "position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;min-width:180px;box-shadow:0 8px 32px rgba(26,111,239,0.15);z-index:9999;overflow:hidden;";
   var safeN = escQ(name);
   menu.innerHTML =
     "<div style='padding:8px 14px;border-bottom:1px solid var(--border);background:var(--surface2);font-family:Share Tech Mono,monospace;font-size:10px;color:var(--blue);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"+escHtml(name)+"</div>" +
@@ -2384,7 +2230,7 @@ function fmMenuDelete() {
   // Show custom confirmation overlay instead of native confirm()
   var overlay = document.createElement('div');
   overlay.id = 'fm-delete-confirm';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(26,35,64,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
     "<div style='background:var(--surface);border:1px solid rgba(255,51,102,0.4);border-radius:14px;padding:32px;max-width:400px;width:90%;text-align:center;'>"+
     "<div style='font-size:36px;margin-bottom:14px;'>🗑</div>"+
@@ -2650,12 +2496,21 @@ function startCamWatch(){
       if(!res.ok) return;
       var data=await res.json();
       if(data.phone_detected){
+        // Close ALL open file tabs first
+        _fvTabs=[]; _fvActiveId=null;
+        document.getElementById("fm-viewer-panel").style.display="none";
+        var modal=document.getElementById("view-modal");
+        if(modal) modal.style.display="none";
+        // Now stop cam watch (clears intervals + tells agent file closed)
         stopCamWatch();
-        closeView();
+        currentFid=null; currentFname=null;
+        // Update status indicator
         var el=document.getElementById("st-cam");
-        if(el){el.textContent="PHONE!";el.style.color="var(--red)";}
-        secAlert("⊘ RECORDING DETECTED — FILE CLOSED",
-          "Someone attempted to photograph or record the screen.\nFile closed automatically.\nIncident reported to manager.","red");
+        if(el){el.textContent="THREAT!";el.style.color="var(--red)";}
+        // Show alert
+        secAlert("⊘ RECORDING DETECTED — FILES CLOSED",
+          "Someone attempted to photograph or record the screen.\nAll files closed automatically.\nIncident reported to manager.","red");
+        // Log event
         apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({event_type:"PHONE_DETECTED",
             detail:"Phone detected by webcam while viewing: "+(currentFname||""),
@@ -2664,28 +2519,7 @@ function startCamWatch(){
     }catch(e){}
   },2000);
 
-  // Existing browser-side camera permission check
-  camInt=setInterval(async function(){
-    var el=document.getElementById("st-cam");
-    try{
-      if(!navigator.permissions){if(el){el.textContent="SECURE";el.style.color="var(--green)";}return;}
-      var perm=await navigator.permissions.query({name:"camera"});
-      if(perm.state==="granted"){
-        if(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices){
-          var devices=await navigator.mediaDevices.enumerateDevices();
-          var activeVideo=devices.some(function(d){return d.kind==="videoinput"&&d.label&&d.label.length>0;});
-          if(activeVideo){
-            stopCamWatch();closeView();
-            if(el){el.textContent="DETECTED!";el.style.color="var(--red)";}
-            apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event_type:"CAMERA_BLOCKED",detail:"Camera active while viewing: "+(currentFname||""),risk:"HIGH",blocked:true})}).catch(function(){});
-            secAlert("CAMERA DETECTED — FILE CLOSED","Live camera detected while viewing document. File closed and incident logged.","red");
-            return;
-          }
-        }
-      }
-      if(el){el.textContent="SECURE";el.style.color="var(--green)";}
-    }catch(e){if(el){el.textContent="SECURE";el.style.color="var(--green)";}}
-  },3000);
+  // Browser camera check removed — agent webcam handles monitoring via phoneInt
 }
 
 function stopCamWatch(){
@@ -2768,10 +2602,18 @@ function fmViewerCloseAll() {
 async function viewFile(fid, fname, mime) {
   // If already open, just switch to it
   var existing = _fvTabs.find(function(t){ return t.fid===fid; });
-  if(existing) {
-    fmViewerSwitch(fid);
-    return;
-  }
+  if(existing) { fmViewerSwitch(fid); return; }
+  // Camera hardware check before opening file
+  try{
+    var devs=await navigator.mediaDevices.enumerateDevices();
+    if(!devs.some(function(d){return d.kind==="videoinput";})){
+      secAlert("⊛ FILE VIEWING BLOCKED","No camera detected. A webcam is required to view files.","red");
+      apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({event_type:"FILE_BLOCKED_NO_CAMERA",detail:"No camera: "+fname,risk:"HIGH",blocked:true})
+      }).catch(function(){});
+      return;
+    }
+  }catch(e){ secAlert("⊛ FILE VIEWING BLOCKED","Camera check failed. Please connect a webcam.","red"); return; }
   // Add new tab with loading state
   _fvTabs.push({fid:fid, fname:fname, mime:mime, contentHtml:"<div style='padding:60px;text-align:center;color:var(--muted);font-family:Share Tech Mono,monospace;font-size:11px;'>Loading preview…</div>"});
   _fvActiveId = fid;
@@ -2932,32 +2774,32 @@ async function loadTravelStatus(){
     box.innerHTML=
       "<div style='display:flex;flex-direction:column;gap:12px'>"+
       // Status badge
-      "<div style='display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(0,0,0,0.2);border-radius:8px;border:1px solid "+col+"33'>"+
+      "<div style='display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:"+col+"15;border-radius:8px;border:1px solid "+col+"33'>"+
         "<span style='font-family:Share Tech Mono,monospace;font-size:10px;color:var(--muted);letter-spacing:2px'>STATUS</span>"+
         "<span style='font-family:Share Tech Mono,monospace;font-size:12px;font-weight:700;color:"+col+"'>"+statusIcon+" "+(d.status||"").toUpperCase()+"</span>"+
       "</div>"+
       // Route
-      "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:12px 14px;'>"+
+      "<div style='background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;'>"+
         "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:8px'>ROUTE</div>"+
         "<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>"+
-          "<span style='font-size:13px;font-weight:700;color:#fff'>"+(d.source||"—")+"</span>"+
+          "<span style='font-size:13px;font-weight:700;color:var(--text)'>"+(d.source||"—")+"</span>"+
           "<span style='color:var(--blue);font-size:16px'>→</span>"+
-          "<span style='font-size:13px;font-weight:700;color:#fff'>"+(d.destination||"—")+"</span>"+
+          "<span style='font-size:13px;font-weight:700;color:var(--text)'>"+(d.destination||"—")+"</span>"+
         "</div>"+
       "</div>"+
       // Dates
       "<div style='display:grid;grid-template-columns:1fr 1fr;gap:8px'>"+
-        "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+        "<div style='background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;'>"+
           "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>FROM</div>"+
           "<div style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text)'>"+(d.start_date||"—")+"</div>"+
         "</div>"+
-        "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+        "<div style='background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;'>"+
           "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>TO</div>"+
           "<div style='font-family:Share Tech Mono,monospace;font-size:11px;color:var(--text)'>"+(d.end_date||"—")+"</div>"+
         "</div>"+
       "</div>"+
       // Reason
-      "<div style='background:rgba(0,0,0,0.15);border-radius:8px;padding:10px 12px;'>"+
+      "<div style='background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;'>"+
         "<div style='font-family:Share Tech Mono,monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:1px'>REASON</div>"+
         "<div style='font-size:13px;color:var(--text)'>"+(d.reason||"—")+"</div>"+
       "</div>"+
@@ -3704,33 +3546,215 @@ function emClearCompose() {
   if (err) err.textContent = '';
   emAttachFiles = [];
   emRenderAttachList();
+  emCloseAttachPicker();
 }
 
 function emClear() { emCloseCompose(); }
 
-// ── Attachments (Employee only) ────────────────────────────────────────────
-var emAttachFiles = [];
+// ── Attachments — VFS File Picker ─────────────────────────────────────────
+var emAttachFiles = [];   // [{name, fid, size, mime, _node}]
+var emApCwd       = '';   // current path inside VFS picker
+var emApSearch_q  = '';   // live search query
 
-function emHandleAttach(files) {
-  var newFiles = Array.from(files);
-  var blocked  = ['.exe','.bat','.sh','.cmd','.dll','.zip','.rar','.sql','.db','.key'];
-  newFiles.forEach(function(f) {
-    var ext = '.' + f.name.split('.').pop().toLowerCase();
-    if (blocked.includes(ext)) { emShowMsg('Blocked file type: ' + f.name, 'err'); return; }
-    if (f.size > 10 * 1024 * 1024) { emShowMsg('File too large (max 10MB): ' + f.name, 'err'); return; }
-    if (emAttachFiles.length >= 3) { emShowMsg('Max 3 attachments allowed', 'warn'); return; }
-    emAttachFiles.push(f);
+// collect all files recursively
+function emApFlatFiles(node, path) {
+  var out = [];
+  if (!node || !node.children) return out;
+  Object.keys(node.children).forEach(function(k) {
+    var c = node.children[k];
+    var p = path ? path + '/' + k : k;
+    if (c.type === 'folder') out = out.concat(emApFlatFiles(c, p));
+    else out.push({ name: k, path: p, fid: c.fid || null, size: c.size || 0, mime: c.mime || '', _node: c });
   });
+  return out;
+}
+
+function emOpenAttachPicker() {
+  if (!fmFS) fmInitFS();
+  emApCwd      = '';
+  emApSearch_q = '';
+  var inp = document.getElementById('em-ap-search');
+  if (inp) inp.value = '';
+  var ov = document.getElementById('em-attach-picker-overlay');
+  ov.style.display = 'flex';
+  emApRender();
+}
+
+function emCloseAttachPicker() {
+  var ov = document.getElementById('em-attach-picker-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+function emConfirmAttach() {
+  emCloseAttachPicker();
+}
+
+function emApSearch(q) {
+  emApSearch_q = q.toLowerCase();
+  emApRender();
+}
+
+function emApNavTo(path) {
+  emApCwd      = path;
+  emApSearch_q = '';
+  var inp = document.getElementById('em-ap-search');
+  if (inp) inp.value = '';
+  emApRender();
+}
+
+function emApRender() {
+  var grid  = document.getElementById('em-ap-grid');
+  var bc    = document.getElementById('em-ap-breadcrumb');
+  var hint  = document.getElementById('em-ap-hint');
+
+  // Breadcrumb
+  var parts  = emApCwd ? emApCwd.split('/').filter(Boolean) : [];
+  var bcHtml = '<span onclick="emApNavTo(\'\')" style="cursor:pointer;color:var(--blue);">🏠 Home</span>';
+  var built  = '';
+  parts.forEach(function(p, i) {
+    built = built ? built + '/' + p : p;
+    var snap = built;
+    bcHtml += '<span style="color:var(--muted);margin:0 3px;">/</span>';
+    if (i === parts.length - 1) {
+      bcHtml += '<span style="color:var(--text);">' + escHtml(p) + '</span>';
+    } else {
+      bcHtml += '<span onclick="emApNavTo(\'' + snap.replace(/'/g,"\\'") + '\')" style="cursor:pointer;color:var(--blue);">' + escHtml(p) + '</span>';
+    }
+  });
+  bc.innerHTML = bcHtml;
+
+  var items = [];
+
+  if (emApSearch_q) {
+    // Search mode — flat list of all files matching query
+    var all = emApFlatFiles(fmFS, '');
+    items = all.filter(function(f) { return f.name.toLowerCase().indexOf(emApSearch_q) !== -1; });
+    hint.textContent = items.length + ' result(s) for "' + emApSearch_q + '"';
+    grid.innerHTML = items.length ? items.map(function(f, i) { return emApFileCard(f, i, true); }).join('') :
+      '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">No files match "' + escHtml(emApSearch_q) + '"</div>';
+    emApUpdateSelectedBar();
+    return;
+  }
+
+  var node = emApCwd ? (function() {
+    var parts2 = emApCwd.split('/').filter(Boolean), n = fmFS;
+    for (var i = 0; i < parts2.length; i++) { n = (n.children || {})[parts2[i]]; if (!n) return null; }
+    return n;
+  })() : fmFS;
+
+  if (!node) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">Folder not found</div>'; return; }
+
+  var folderItems = [], fileItems = [];
+  Object.keys(node.children || {}).forEach(function(k) {
+    var c = node.children[k];
+    if (c.type === 'folder') folderItems.push({ name: k, _node: c });
+    else fileItems.push({ name: k, fid: c.fid || null, size: c.size || 0, mime: c.mime || '', path: emApCwd ? emApCwd + '/' + k : k, _node: c });
+  });
+
+  if (!folderItems.length && !fileItems.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;padding:32px;">This folder is empty<br><span style="font-size:9px;opacity:.7;">Upload files in the Files section first</span></div>';
+    emApUpdateSelectedBar();
+    return;
+  }
+
+  hint.textContent = folderItems.length + ' folder(s), ' + fileItems.length + ' file(s) · Click to select · Max 3';
+
+  var html = '';
+  // Back button if in subfolder
+  if (emApCwd) {
+    var parentPath = emApCwd.indexOf('/') !== -1 ? emApCwd.substring(0, emApCwd.lastIndexOf('/')) : '';
+    html += '<div onclick="emApNavTo(\'' + parentPath.replace(/'/g,"\\'") + '\')" style="border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface2);" onmouseover="this.style.borderColor=\'rgba(224,138,0,0.5)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+      '<div style="font-size:26px;margin-bottom:6px;">⬆️</div>' +
+      '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);">.. Up</div>' +
+    '</div>';
+  }
+  folderItems.forEach(function(f) {
+    var navPath = emApCwd ? emApCwd + '/' + f.name : f.name;
+    html += '<div onclick="emApNavTo(\'' + navPath.replace(/'/g,"\\'") + '\')" style="border:1px solid var(--border);border-radius:10px;padding:14px 8px;text-align:center;cursor:pointer;transition:border-color .15s;" onmouseover="this.style.borderColor=\'rgba(224,138,0,0.5)\';this.style.background=\'rgba(224,138,0,0.04)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'\'">' +
+      '<div style="font-size:26px;margin-bottom:6px;">📁</div>' +
+      '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(f.name) + '">' + escHtml(f.name) + '</div>' +
+    '</div>';
+  });
+  fileItems.forEach(function(f, i) { html += emApFileCard(f, i, false); });
+  grid.innerHTML = html;
+  emApUpdateSelectedBar();
+}
+
+function emApFileCard(f, i, isSearch) {
+  var icon     = fIconByName(f.name);
+  var isSelected = emAttachFiles.some(function(a){ return a.path === f.path; });
+  var isBlocked  = emAttachFiles.length >= 3 && !isSelected;
+  var border   = isSelected ? '2px solid var(--blue)' : '1px solid var(--border)';
+  var bg       = isSelected ? 'rgba(26,111,239,0.08)' : '';
+  var sizeTxt  = fmtBytes(f.size);
+  var dirTxt   = isSearch && f.path.indexOf('/') !== -1 ? f.path.split('/').slice(0,-1).join('/') : '';
+  return '<div onclick="' + (isBlocked ? '' : 'emApToggleFile(this,\'' + f.path.replace(/'/g,"\\'") + '\',\'' + (f.fid||'').replace(/'/g,"\\'") + '\',' + f.size + ',\'' + (f.mime||'').replace(/'/g,"\\'") + '\')') + '"' +
+    ' data-fp="' + escHtml(f.path) + '"' +
+    ' style="border:' + border + ';border-radius:10px;padding:12px 8px;text-align:center;cursor:' + (isBlocked ? 'not-allowed' : 'pointer') + ';transition:all .15s;background:' + bg + ';opacity:' + (isBlocked ? '.45' : '1') + ';position:relative;"' +
+    (isBlocked ? '' : ' onmouseover="if(!this.classList.contains(\'ap-sel\'))this.style.borderColor=\'rgba(26,111,239,0.5)\';this.style.background=\'rgba(26,111,239,0.05)\'"') +
+    (isBlocked ? '' : ' onmouseout="if(!this.classList.contains(\'ap-sel\')){this.style.borderColor=\'var(--border)\';this.style.background=\'\'}"') +
+    (isSelected ? ' class="ap-sel"' : '') +
+    '>' +
+    (isSelected ? '<div style="position:absolute;top:5px;right:6px;background:var(--blue);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;">✓</div>' : '') +
+    '<div style="font-size:24px;margin-bottom:5px;">' + icon + '</div>' +
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escHtml(f.name) + '">' + escHtml(f.name) + '</div>' +
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:8px;color:var(--muted);margin-top:2px;">' + sizeTxt + (dirTxt ? ' · ' + escHtml(dirTxt) : '') + '</div>' +
+  '</div>';
+}
+
+function emApToggleFile(el, path, fid, size, mime) {
+  var name = path.split('/').pop();
+  var idx  = emAttachFiles.findIndex(function(a){ return a.path === path; });
+  if (idx !== -1) {
+    emAttachFiles.splice(idx, 1);
+  } else {
+    if (emAttachFiles.length >= 3) { emShowMsg('Max 3 attachments', 'warn'); return; }
+    emAttachFiles.push({ name: name, path: path, fid: fid, size: size, mime: mime });
+  }
+  emApUpdateCountBadge();
+  emApUpdateSelectedBar();
   emRenderAttachList();
-  document.getElementById('em-attach-input').value = '';
+  // Re-render the grid to refresh selected states
+  emApRender();
+}
+
+function emApUpdateCountBadge() {
+  var b = document.getElementById('em-ap-count-badge');
+  if (!b) return;
+  var n = emAttachFiles.length;
+  b.textContent = n + ' / 3';
+  b.style.display = n ? 'inline' : 'none';
+  b.style.background = n >= 3 ? 'rgba(224,37,58,0.12)' : 'rgba(26,111,239,0.12)';
+  b.style.color       = n >= 3 ? 'var(--red)' : 'var(--blue)';
+  b.style.borderColor = n >= 3 ? 'rgba(224,37,58,0.3)' : 'rgba(26,111,239,0.3)';
+}
+
+function emApUpdateSelectedBar() {
+  var bar    = document.getElementById('em-ap-selected-bar');
+  var chips  = document.getElementById('em-ap-selected-chips');
+  emApUpdateCountBadge();
+  if (!emAttachFiles.length) { if (bar) bar.style.display = 'none'; return; }
+  if (bar)   bar.style.display = 'flex';
+  if (chips) chips.innerHTML = emAttachFiles.map(function(f, i) {
+    return '<span style="background:rgba(26,111,239,0.1);border:1px solid rgba(26,111,239,0.3);color:var(--blue);padding:2px 8px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:9px;display:inline-flex;align-items:center;gap:4px;">' +
+      fIconByName(f.name) + ' ' + escHtml(f.name.length > 18 ? f.name.slice(0,18)+'…' : f.name) +
+      '<span onclick="emApRemoveSelected(' + i + ')" style="cursor:pointer;color:var(--red);font-size:12px;line-height:1;">×</span></span>';
+  }).join('');
+}
+
+function emApRemoveSelected(i) {
+  emAttachFiles.splice(i, 1);
+  emApUpdateSelectedBar();
+  emRenderAttachList();
+  emApRender();
 }
 
 function emRenderAttachList() {
   var el = document.getElementById('em-attach-list');
   if (!el) return;
   el.innerHTML = emAttachFiles.map(function(f, i) {
-    return '<span style="background:rgba(0,136,255,0.12);border:1px solid rgba(0,136,255,0.3);color:var(--blue);padding:2px 8px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:9px;display:inline-flex;align-items:center;gap:4px;">📎 ' +
-      f.name.slice(0, 20) + (f.name.length > 20 ? '…' : '') +
+    return '<span style="background:rgba(26,111,239,0.1);border:1px solid rgba(26,111,239,0.3);color:var(--blue);padding:2px 8px;border-radius:100px;font-family:\'Share Tech Mono\',monospace;font-size:9px;display:inline-flex;align-items:center;gap:4px;">' +
+      '📎 ' + escHtml(f.name.length > 20 ? f.name.slice(0,20)+'…' : f.name) +
       '<span onclick="emRemoveAttach(' + i + ')" style="cursor:pointer;color:var(--red);font-size:12px;margin-left:2px;">×</span></span>';
   }).join('');
 }
@@ -3738,6 +3762,7 @@ function emRenderAttachList() {
 function emRemoveAttach(i) {
   emAttachFiles.splice(i, 1);
   emRenderAttachList();
+  emApUpdateCountBadge();
 }
 
 function emRenderComposeTags() {
@@ -3806,15 +3831,14 @@ async function emSend() {
   try {
     var r, data;
     if (emAttachFiles.length > 0) {
-      // Send with attachments using FormData
       var fd = new FormData();
-      fd.append('to',      JSON.stringify(emState.composeToR));
-      fd.append('subject', subject);
-      fd.append('body',    body);
-      emAttachFiles.forEach(function(f) { fd.append('attachments', f); });
-      r    = await apiFetch('/api/mail/send', { method: 'POST', body: fd });
+      fd.append('to',        JSON.stringify(emState.composeToR));
+      fd.append('subject',   subject);
+      fd.append('body',      body);
+      fd.append('vfs_files', JSON.stringify(emAttachFiles.map(function(f){ return {name:f.name, fid:f.fid}; })));
+      r = await apiFetch('/api/mail/send', { method: 'POST', body: fd });
     } else {
-      r    = await apiFetch('/api/mail/send', {
+      r = await apiFetch('/api/mail/send', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ to: emState.composeToR, subject: subject, body: body })
       });
@@ -4260,6 +4284,35 @@ function compSubmitDispute(){
   document.getElementById('comp-dispType').value=''; document.getElementById('comp-dispRef').value=''; document.getElementById('comp-dispDesc').value='';
 }
 
+// Camera hardware check on login — enumerateDevices only checks if hardware EXISTS,
+// does NOT open or activate the camera in any way.
+async function checkCameraOnLoad(){
+  var hasCamera=false;
+  try{
+    var devs=await navigator.mediaDevices.enumerateDevices();
+    hasCamera=devs.some(function(d){return d.kind==="videoinput";});
+  }catch(e){ hasCamera=false; }
+  if(!hasCamera){
+    apiFetch("/api/agent/event-browser",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({event_type:"NO_CAMERA_LOGIN",detail:"Login blocked — no camera on device.",risk:"HIGH",blocked:true})
+    }).catch(function(){});
+    var ov=document.getElementById("sec-overlay");
+    var ti=document.getElementById("sec-title");
+    var ms=document.getElementById("sec-msg");
+    var btn=ov?ov.querySelector("button"):null;
+    if(ti){ti.textContent="⊛ NO CAMERA DETECTED — ACCESS DENIED";ti.style.color="var(--red)";}
+    if(ov){ov.style.display="flex";}
+    if(btn){btn.disabled=true;btn.style.opacity="0.4";btn.style.cursor="not-allowed";}
+    var secs=5;
+    (function tick(){
+      if(ms){ms.textContent="A webcam is required to access this system. No camera detected on this device. Logging out in "+secs+" second"+(secs!==1?"s":"")+"... Please connect a webcam and log in again.";}
+      if(secs<=0){window.location.href="/logout";return;}
+      secs--;
+      setTimeout(tick,1000);
+    })();
+  }
+}
+
 // INIT
 fmInitFS();
 loadCtx();
@@ -4269,6 +4322,8 @@ loadMyFmUploads();
 startTimer();
 // init new teammate features
 clCheckFolder();
+// Camera hardware check — runs after page load, never activates camera
+checkCameraOnLoad();
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 var _notifList = [];
@@ -4637,7 +4692,7 @@ function showNotifBanner(msg, color) {
   var colors = {green:'var(--green)', yellow:'var(--yellow)', red:'var(--red)', blue:'var(--blue)'};
   var c = colors[color] || colors.green;
   var el = document.createElement('div');
-  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid '+c+';border-radius:10px;padding:12px 18px;font-size:12px;font-family:var(--mono);z-index:9999;max-width:360px;color:'+c+';box-shadow:0 4px 20px rgba(0,0,0,.4);';
+  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid '+c+';border-radius:10px;padding:12px 18px;font-size:12px;font-family:var(--mono);z-index:9999;max-width:360px;color:'+c+';box-shadow:0 4px 20px rgba(26,111,239,.15);';
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(function() { el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(function(){el.remove();},400); }, 5000);
@@ -4651,6 +4706,41 @@ showPanel = function(name) {
 };
 
 </script>
+<!-- ══ EMAIL ATTACH — VFS FILE PICKER OVERLAY ══════════════════════════════ -->
+<div id="em-attach-picker-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,35,64,0.72);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:90%;max-width:640px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(26,111,239,0.18);overflow:hidden;">
+    <!-- Header -->
+    <div style="background:var(--surface2);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--blue);letter-spacing:2px;">📎 ATTACH FROM FILES</span>
+        <span id="em-ap-count-badge" style="background:rgba(26,111,239,0.12);border:1px solid rgba(26,111,239,0.3);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 8px;border-radius:100px;display:none;">0 / 3</span>
+      </div>
+      <button onclick="emCloseAttachPicker()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:2px 8px;border-radius:6px;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>
+    <!-- Search + breadcrumb bar -->
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surface2);">
+      <div id="em-ap-breadcrumb" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--blue);display:flex;align-items:center;gap:4px;flex:1;overflow:hidden;white-space:nowrap;"></div>
+      <input id="em-ap-search" type="text" placeholder="🔍 Search files…" oninput="emApSearch(this.value)"
+        style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;width:180px;">
+    </div>
+    <!-- File grid -->
+    <div id="em-ap-grid" style="flex:1;overflow-y:auto;padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;align-content:start;"></div>
+    <!-- Selected chips -->
+    <div id="em-ap-selected-bar" style="display:none;padding:8px 16px;border-top:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;min-height:42px;">
+      <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);flex-shrink:0;">SELECTED:</span>
+      <div id="em-ap-selected-chips" style="display:flex;gap:5px;flex-wrap:wrap;flex:1;"></div>
+    </div>
+    <!-- Footer -->
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--surface2);">
+      <span id="em-ap-hint" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">Click files to select · Max 3 · Folders to navigate</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="emCloseAttachPicker()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 16px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;">Cancel</button>
+        <button onclick="emConfirmAttach()" style="background:var(--blue);border:1px solid var(--blue);color:#fff;padding:6px 18px;border-radius:8px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;">✓ Attach</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
+
