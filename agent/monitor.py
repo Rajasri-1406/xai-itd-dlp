@@ -39,9 +39,8 @@ except ImportError:
     WATCHDOG = False
 
 # ── Config ────────────────────────────────────────────────────────────────────
-SERVER_URL = "http://127.0.0.1:5000"
-HEARTBEAT_INTERVAL      = 5
-CLIPBOARD_CLEAR_INTERVAL = 2
+SERVER_URL = os.environ.get("XAI_SERVER_URL", "https://xai-itd-dlp.onrender.com").rstrip("/")
+
 SENSITIVE_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".txt", ".pptx",
                         ".py", ".db", ".json", ".xml"}
 MONITORED_PATHS = [
@@ -796,21 +795,63 @@ def start_agent(email, token, name="Employee"):
 
 # ── STANDALONE ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    import json
+    import getpass, json
+
+    print("=" * 55)
+    print("  XAI-ITD-DLP Agent — Direct Start")
+    print(f"  Server: {SERVER_URL}")
+    print("=" * 55)
+
+    # Try local session_token.json first (local dev fallback)
     TOKEN_FILE = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "session_token.json"
     )
     if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE) as f:
-            s = json.load(f)
-        email = s["email"]
-        token = s["token"]
-        name  = s.get("name", "Employee")
-        print(f"Auto-loaded: {name} ({email})")
+        try:
+            with open(TOKEN_FILE) as f:
+                s = json.load(f)
+            email = s["email"]
+            token = s["token"]
+            name  = s.get("name", "Employee")
+            print(f"[AGENT] Auto-loaded session: {name} ({email})")
+        except Exception:
+            token = None
     else:
-        email = input("Employee email: ").strip()
-        token = input("Session token:  ").strip()
-        name  = input("Your name:      ").strip() or "Employee"
+        token = None
+
+    # If no local token — login via server API
+    if not token:
+        print("[AGENT] No local session found. Login via server API.")
+        while True:
+            email    = input("Employee email:  ").strip()
+            password = getpass.getpass("Password:        ")
+            try:
+                res = requests.post(
+                    f"{SERVER_URL}/api/login",
+                    json={"email": email, "password": password},
+                    timeout=15
+                )
+                if res.status_code == 200:
+                    data  = res.json()
+                    token = data.get("token", "")
+                    name  = data.get("name", "Employee")
+                    if not token:
+                        otp = input("Enter OTP: ").strip()
+                        res2 = requests.post(
+                            f"{SERVER_URL}/api/verify-otp",
+                            json={"email": email, "otp": otp},
+                            timeout=15
+                        )
+                        if res2.status_code == 200:
+                            data2 = res2.json()
+                            token = data2.get("token", "")
+                            name  = data2.get("name", "Employee")
+                    if token:
+                        print(f"[AGENT] Login successful — {name}")
+                        break
+                print(f"[AGENT] Login failed ({res.status_code}) — try again.")
+            except Exception as e:
+                print(f"[AGENT] Connection error: {e}")
 
     start_agent(email, token, name)

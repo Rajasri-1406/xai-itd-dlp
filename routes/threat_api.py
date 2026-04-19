@@ -19,12 +19,11 @@ from flask import Blueprint, jsonify, request
 from pymongo import MongoClient
 from bson  import ObjectId
 from datetime import datetime, timedelta
+from config import MONGO_URI, DB_NAME
 
 # ── Config ───────────────────────────────────────────────────────────────────
-MONGO_URI = "mongodb://localhost:27017/"
-DB_NAME   = "xai_itd_dlp"
 
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
 db     = client[DB_NAME]
 
 threat_bp = Blueprint("threat_api", __name__)

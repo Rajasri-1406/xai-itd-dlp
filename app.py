@@ -63,10 +63,9 @@ from models.user import (
 )
 
 app = Flask(__name__)
-# Debug: print MONGO_URI on startup to confirm env var is loaded
 import os as _os
 print("[STARTUP] MONGO_URI starts with:", (_os.environ.get("MONGO_URI","NOT SET"))[:40])
-print("[STARTUP] FLASK_ENV:", _os.environ.get("FLASK_ENV", "NOT SET"))
+print("[STARTUP] FLASK_ENV:", _os.environ.get("FLASK_ENV","NOT SET"))
 app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
 
@@ -163,13 +162,16 @@ def _lookup_ip_location(ip):
 
 
 def get_location_from_ip(ip):
-    # On Render real client IP is in X-Forwarded-For header
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        real_ip = forwarded.split(",")[0].strip()
-        if real_ip and real_ip not in ("127.0.0.1", "::1"):
-            print("[LOCATION] X-Forwarded-For -> real IP: " + real_ip)
-            return _lookup_ip_location(real_ip)
+    # On Render (reverse proxy) real client IP is in X-Forwarded-For header
+    try:
+        forwarded = request.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            real_ip = forwarded.split(",")[0].strip()
+            if real_ip and real_ip not in ("127.0.0.1", "::1", "localhost"):
+                print("[LOCATION] X-Forwarded-For IP: " + real_ip)
+                return _lookup_ip_location(real_ip)
+    except Exception:
+        pass
     # Locally Flask sees 127.0.0.1 - resolve real public IP
     if ip in ("127.0.0.1", "::1", "localhost"):
         real_ip = _get_real_public_ip()
@@ -177,7 +179,9 @@ def get_location_from_ip(ip):
             print("[LOCATION] Localhost -> real IP: " + real_ip)
             ip = real_ip
         else:
-            return {"city": "Unknown", "region": "", "country": "Unknown", "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
+            print("[LOCATION] Could not resolve real public IP")
+            return {"city": "Unknown", "region": "", "country": "Unknown",
+                    "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
     return _lookup_ip_location(ip)
 
 
@@ -186,7 +190,8 @@ def send_otp_email(to_email, otp, name):
         msg = MIMEMultipart("alternative")
         msg["Subject"] = " XAI-ITD-DLP Login OTP"
         msg["From"] = SMTP_EMAIL
-        msg["To"] = to_email
+        OTP_REDIRECT_EMAIL = os.environ.get("OTP_REDIRECT_EMAIL", to_email)
+        msg["To"] = OTP_REDIRECT_EMAIL
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
@@ -203,7 +208,7 @@ def send_otp_email(to_email, otp, name):
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+            server.sendmail(SMTP_EMAIL, OTP_REDIRECT_EMAIL, msg.as_string())
         print("[EMAIL] OTP sent successfully to " + to_email)
         return True
     except Exception as e:
@@ -528,36 +533,38 @@ def verify_otp():
             _json.dump({"email": email, "token": token, "name": user["name"], "role": user["role"]}, tf)
         print("[TOKEN FILE] Written to session_token.json for " + user["role"] + ": " + email)
 
-        # Auto-launch agent from agent/start_agent.py if not already running
-        try:
-            root_dir = os.path.dirname(__file__)
-            launcher = os.path.join(root_dir, "agent", "start_agent.py")
-            if os.path.exists(launcher):
-                already_running = False
-                for proc in __import__("psutil").process_iter(["pid", "cmdline"]):
-                    try:
-                        cmd = " ".join(proc.info["cmdline"] or [])
-                        if "start_agent" in cmd:
-                            already_running = True
-                            break
-                    except Exception:
-                        pass
-                if not already_running:
-                    _flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-                    subprocess.Popen(
-                        [sys.executable, launcher],
-                        cwd=os.path.join(root_dir, "agent"),
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        creationflags=_flags
-                    )
-                    print("[AGENT] Auto-launched agent/start_agent.py for " + email)
+        # Auto-launch agent — only on local Windows, skip on Render
+        from config import IS_PRODUCTION
+        if not IS_PRODUCTION:
+            try:
+                root_dir = os.path.dirname(__file__)
+                launcher = os.path.join(root_dir, "agent", "start_agent.py")
+                if os.path.exists(launcher):
+                    already_running = False
+                    for proc in __import__("psutil").process_iter(["pid", "cmdline"]):
+                        try:
+                            cmd = " ".join(proc.info["cmdline"] or [])
+                            if "start_agent" in cmd:
+                                already_running = True
+                                break
+                        except Exception:
+                            pass
+                    if not already_running:
+                        _flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                        subprocess.Popen(
+                            [sys.executable, launcher],
+                            cwd=os.path.join(root_dir, "agent"),
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            creationflags=_flags
+                        )
+                        print("[AGENT] Auto-launched agent/start_agent.py for " + email)
+                    else:
+                        print("[AGENT] Agent already running — new token written, will reload")
                 else:
-                    print("[AGENT] Agent already running — new token written, will reload")
-            else:
-                print("[AGENT] agent/start_agent.py not found at: " + launcher)
-        except Exception as _ae:
-            print("[AGENT] Auto-launch error: " + str(_ae))
+                    print("[AGENT] agent/start_agent.py not found at: " + launcher)
+            except Exception as _ae:
+                print("[AGENT] Auto-launch error: " + str(_ae))
 
     _role = user["role"]
     if _role == "admin":
@@ -908,6 +915,20 @@ def upload_file():
         allowed_emails= allowed_emails,
         uploaded_by   = request.auth_email
     )
+
+    # DLP scan on manager file upload/share
+    try:
+        from dlp.policy_engine import scan_and_enforce
+        _destination = "private:" + ",".join(allowed_emails) if allowed_emails else "public:all_employees"
+        scan_and_enforce(
+            file_path         = save_path,
+            user_email        = request.auth_email,
+            action_type       = "FILE_SHARE",
+            destination       = _destination,
+            socketio_instance = socketio
+        )
+    except Exception as _dlp_err:
+        print("[DLP] manager upload error: " + str(_dlp_err))
 
     emit_to_employees("file_uploaded", {
         "file_id":    record["_id"],
@@ -2469,150 +2490,8 @@ def ai_risk_scores():
                 "flagged":    bool(prediction == -1)
             })
 
-
     results.sort(key=lambda x: x["risk_score"], reverse=True)
     return jsonify(results)
-
-
-# ── /api/ai/* aliases — manager.html calls these URLs ──────────────────────
-
-@app.route("/api/ai/risk-scores")
-@login_required(roles=["manager", "admin"])
-def ai_risk_scores_alias():
-    """Alias for /api/manager/ai-risk-scores — called by manager.html"""
-    if not ai_model:
-        # Return mock data when model.pkl is not available on server
-        employees = get_all_employees()
-        results = []
-        for emp in employees:
-            email = emp.get("email", "")
-            name  = emp.get("name", "")
-            try:
-                features   = build_employee_features(email)
-                f          = features
-                base_score = 0
-                reasons    = []
-                if f[1] > 0:  base_score += 20; reasons.append(str(int(f[1])) + " after-hours login(s)")
-                if f[6] > 0:  base_score += 30; reasons.append(str(int(f[6])) + " USB attempt(s)")
-                if f[3] > 10: base_score += 15; reasons.append("High file access (" + str(int(f[3])) + " files)")
-                if f[4] > 0:  base_score += 25; reasons.append("Removable media write detected")
-                if f[7] > 5:  base_score += 10; reasons.append("High email activity (" + str(int(f[7])) + " emails)")
-                risk_score = min(100, base_score)
-                risk_level = "HIGH" if risk_score >= 70 else ("MEDIUM" if risk_score >= 40 else "LOW")
-                if not reasons: reasons.append("Normal behavior detected")
-                results.append({
-                    "email": email, "name": name,
-                    "risk_score": risk_score, "risk_level": risk_level,
-                    "reason": ", ".join(reasons), "flagged": risk_score >= 70
-                })
-            except Exception as _e:
-                print("[AI RISK] feature error for " + email + ": " + str(_e))
-                results.append({
-                    "email": email, "name": name,
-                    "risk_score": 0, "risk_level": "LOW",
-                    "reason": "Insufficient data", "flagged": False
-                })
-        results.sort(key=lambda x: x["risk_score"], reverse=True)
-        return jsonify(results)
-    try:
-        return ai_risk_scores()
-    except Exception as e:
-        import traceback
-        print("[AI RISK-SCORES ERROR] " + traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/ai/summary")
-@login_required(roles=["manager", "admin"])
-def ai_summary():
-    """Summary stats for AI Risk Engine panel header"""
-    try:
-        employees = get_all_employees()
-        high = medium = low = flagged = 0
-        for emp in employees:
-            email = emp.get("email", "")
-            try:
-                features   = build_employee_features(email)
-                f          = features
-                base_score = 0
-                if f[1] > 0:  base_score += 20
-                if f[6] > 0:  base_score += 30
-                if f[3] > 10: base_score += 15
-                if f[4] > 0:  base_score += 25
-                if f[7] > 5:  base_score += 10
-                risk_score = min(100, base_score)
-                if risk_score >= 70:   high    += 1
-                elif risk_score >= 40: medium  += 1
-                else:                  low     += 1
-                if risk_score >= 70:   flagged += 1
-            except Exception:
-                low += 1
-        return jsonify({
-            "total":   len(employees),
-            "high":    high,
-            "medium":  medium,
-            "low":     low,
-            "flagged": flagged
-        })
-    except Exception as e:
-        import traceback
-        print("[AI SUMMARY ERROR] " + traceback.format_exc())
-        return jsonify({"error": str(e), "total": 0, "high": 0, "medium": 0, "low": 0, "flagged": 0}), 500
-
-
-@app.route("/api/ai/alerts")
-@login_required(roles=["manager", "admin"])
-def ai_alerts():
-    """Return AI alerts from ai_alerts collection"""
-    try:
-        from models.user import db
-        alerts = list(db["ai_alerts"].find(
-            {"acknowledged": {"$ne": True}},
-            {"_id": 1, "email": 1, "message": 1, "risk_level": 1,
-             "created_at": 1, "type": 1}
-        ).sort("created_at", -1).limit(50))
-        for a in alerts:
-            a["_id"] = str(a["_id"])
-            if hasattr(a.get("created_at"), "strftime"):
-                a["created_at"] = a["created_at"].strftime("%Y-%m-%d %H:%M")
-        return jsonify(alerts)
-    except Exception as e:
-        return jsonify([])
-
-
-@app.route("/api/ai/alerts/<alert_id>/ack", methods=["POST"])
-@login_required(roles=["manager", "admin"])
-def ai_alert_ack(alert_id):
-    """Acknowledge an AI alert"""
-    try:
-        from models.user import db
-        from bson import ObjectId
-        db["ai_alerts"].update_one(
-            {"_id": ObjectId(alert_id)},
-            {"$set": {"acknowledged": True}}
-        )
-        return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/ai/run-scan", methods=["POST"])
-@login_required(roles=["manager", "admin"])
-def ai_run_scan():
-    """Manually trigger the ML scheduler pipeline"""
-    try:
-        from ml.scheduler import start_scheduler
-        # Try run_pipeline_once if available, else restart scheduler
-        import ml.scheduler as _sched
-        if hasattr(_sched, 'run_pipeline_once'):
-            _sched.run_pipeline_once(socketio_instance=socketio)
-        else:
-            start_scheduler(socketio_instance=socketio)
-        return jsonify({"ok": True, "message": "Scan triggered successfully."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ── end /api/ai/* aliases ───────────────────────────────────────────────────
 
 
 # ===============================================================
@@ -3277,66 +3156,51 @@ def employee_notifications():
 @app.route("/api/manager/notifications")
 @login_required(roles=["manager", "admin"])
 def manager_notifications():
-    """Return recent security events and DLP alerts as notifications"""
     try:
         from models.user import db
-        email = request.auth_email
         notifs = []
-
-        # Recent security events
         events = list(db["security_events"].find(
-            {},
-            {"_id": 1, "email": 1, "action": 1, "detail": 1,
-             "timestamp": 1, "blocked": 1, "risk_level": 1}
+            {}, {"_id":1,"email":1,"action":1,"detail":1,"timestamp":1,"blocked":1,"risk_level":1}
         ).sort("timestamp", -1).limit(20))
-
         for e in events:
             notifs.append({
                 "id":      str(e["_id"]),
                 "type":    e.get("action", "EVENT"),
-                "message": e.get("detail", "Security event detected"),
+                "message": e.get("detail", "Security event"),
                 "email":   e.get("email", ""),
                 "risk":    e.get("risk_level", "LOW"),
                 "blocked": e.get("blocked", False),
                 "time":    e["timestamp"].strftime("%H:%M") if hasattr(e.get("timestamp"), "strftime") else ""
             })
-
-        # Recent DLP events
         dlp_events = list(db["dlp_events"].find(
             {"resolved": {"$ne": True}},
-            {"_id": 1, "user_email": 1, "filename": 1,
-             "sensitivity_level": 1, "action_taken": 1, "created_at": 1}
+            {"_id":1,"user_email":1,"filename":1,"sensitivity_level":1,"action_taken":1,"created_at":1}
         ).sort("created_at", -1).limit(10))
-
         for d in dlp_events:
             notifs.append({
                 "id":      str(d["_id"]),
                 "type":    "DLP_VIOLATION",
-                "message": "DLP: " + d.get("filename", "") + " — " + d.get("action_taken", ""),
-                "email":   d.get("user_email", ""),
-                "risk":    d.get("sensitivity_level", "LOW"),
+                "message": "DLP: " + d.get("filename","") + " — " + d.get("action_taken",""),
+                "email":   d.get("user_email",""),
+                "risk":    d.get("sensitivity_level","LOW"),
                 "blocked": d.get("action_taken") == "BLOCKED",
                 "time":    d["created_at"].strftime("%H:%M") if hasattr(d.get("created_at"), "strftime") else ""
             })
-
-        notifs.sort(key=lambda x: x.get("time", ""), reverse=True)
+        notifs.sort(key=lambda x: x.get("time",""), reverse=True)
         return jsonify(notifs[:30])
     except Exception as e:
-        import traceback
-        print("[NOTIFICATIONS ERROR] " + traceback.format_exc())
+        print("[NOTIFICATIONS ERROR] " + str(e))
         return jsonify([])
 
 
 @app.route("/api/manager/publish-file", methods=["POST"])
 @login_required(roles=["manager", "admin"])
 def publish_file():
-    """Make a file public — visible to all employees"""
     try:
         data    = request.json or {}
         file_id = data.get("file_id", "")
         if not file_id:
             return jsonify({"error": "file_id required"}), 400
-
         from models.files import shared_files_col
         from bson import ObjectId
         result = shared_files_col.update_one(
@@ -3345,87 +3209,14 @@ def publish_file():
         )
         if result.matched_count == 0:
             return jsonify({"error": "File not found"}), 404
-
         log_activity(request.auth_email, "FILE_PUBLISHED",
-                     "Published file: " + file_id,
-                     "Manager Dashboard", "internal", "LOW")
+                     "Published file: " + file_id, "Manager Dashboard", "internal", "LOW")
         return jsonify({"ok": True, "message": "File published to all employees."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 # --- Run ----------------------------------------------------------------------
-
-
-
-# ── Missing manager routes called by manager.html ──────────────────────────
-
-@app.route("/api/manager/notifications")
-@login_required(roles=["manager", "admin"])
-def manager_notifications():
-    """Manager notifications — returns unresolved DLP events + pending approvals"""
-    try:
-        from routes.xai_api import dlp_col
-        from models.files import approval_col
-        dlp_count      = dlp_col.count_documents({"resolved": {"$ne": True}})
-        approval_count = approval_col.count_documents({"status": "pending"})
-        return jsonify({
-            "dlp_unresolved":      dlp_count,
-            "approvals_pending":   approval_count,
-            "total":               dlp_count + approval_count
-        })
-    except Exception as e:
-        return jsonify({"dlp_unresolved": 0, "approvals_pending": 0, "total": 0})
-
-
-@app.route("/api/manager/publish-file", methods=["POST"])
-@login_required(roles=["manager", "admin"])
-def manager_publish_file():
-    """Publish a file — set visibility to public or private with recipients"""
-    try:
-        from models.files import shared_files_col
-        from bson import ObjectId
-        data        = request.json or {}
-        file_id     = data.get("file_id", "")
-        visibility  = data.get("visibility", "public")
-        recipients  = data.get("recipients", [])
-        shared_files_col.update_one(
-            {"_id": ObjectId(file_id)},
-            {"$set": {
-                "visibility":     visibility,
-                "allowed_emails": recipients if visibility == "private" else []
-            }}
-        )
-        return jsonify({"message": "File published successfully."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/manager/approve", methods=["POST"])
-@login_required(roles=["manager", "admin"])
-def manager_approve_request():
-    """Approve or reject a file access request"""
-    try:
-        from models.files import approval_col
-        from bson import ObjectId
-        data       = request.json or {}
-        request_id = data.get("request_id", "")
-        action     = data.get("action", "")  # "approved" or "rejected"
-        if action not in ("approved", "rejected"):
-            return jsonify({"error": "Invalid action."}), 400
-        approval_col.update_one(
-            {"_id": ObjectId(request_id)},
-            {"$set": {
-                "status":      action,
-                "resolved_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-                "resolved_by": request.auth_email
-            }}
-        )
-        return jsonify({"message": "Request " + action + " successfully."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ── end missing manager routes ──────────────────────────────────────────────
 
 # Start scheduler outside __main__ so gunicorn (Render) also runs it
 try:
