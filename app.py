@@ -159,26 +159,30 @@ def _lookup_ip_location(ip):
 
 
 def get_location_from_ip(ip):
-    # When running locally Flask sees 127.0.0.1 - resolve the real public IP first
+    # On Render real client IP is in X-Forwarded-For header
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        real_ip = forwarded.split(",")[0].strip()
+        if real_ip and real_ip not in ("127.0.0.1", "::1"):
+            print("[LOCATION] X-Forwarded-For -> real IP: " + real_ip)
+            return _lookup_ip_location(real_ip)
+    # Locally Flask sees 127.0.0.1 - resolve real public IP
     if ip in ("127.0.0.1", "::1", "localhost"):
         real_ip = _get_real_public_ip()
         if real_ip:
             print("[LOCATION] Localhost -> real IP: " + real_ip)
             ip = real_ip
         else:
-            print("[LOCATION] Could not resolve real public IP")
             return {"city": "Unknown", "region": "", "country": "Unknown", "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
     return _lookup_ip_location(ip)
 
 
 def send_otp_email(to_email, otp, name):
     try:
-        # Always deliver OTP to the fixed admin inbox regardless of who is logging in
-        OTP_REDIRECT_EMAIL = os.environ.get("OTP_REDIRECT_EMAIL", SMTP_EMAIL)
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = " XAI-ITD-DLP Login OTP — " + to_email
+        msg["Subject"] = " XAI-ITD-DLP Login OTP"
         msg["From"] = SMTP_EMAIL
-        msg["To"] = OTP_REDIRECT_EMAIL
+        msg["To"] = to_email
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
@@ -195,7 +199,7 @@ def send_otp_email(to_email, otp, name):
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, OTP_REDIRECT_EMAIL, msg.as_string())
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
         print("[EMAIL] OTP sent successfully to " + to_email)
         return True
     except Exception as e:
@@ -2461,8 +2465,142 @@ def ai_risk_scores():
                 "flagged":    bool(prediction == -1)
             })
 
+
     results.sort(key=lambda x: x["risk_score"], reverse=True)
     return jsonify(results)
+
+
+# ── /api/ai/* aliases — manager.html calls these URLs ──────────────────────
+
+@app.route("/api/ai/risk-scores")
+@login_required(roles=["manager", "admin"])
+def ai_risk_scores_alias():
+    """Alias for /api/manager/ai-risk-scores — called by manager.html"""
+    if not ai_model:
+        # Return mock data when model.pkl is not available on server
+        employees = get_all_employees()
+        results = []
+        for emp in employees:
+            email = emp.get("email", "")
+            name  = emp.get("name", "")
+            try:
+                features   = build_employee_features(email)
+                f          = features
+                base_score = 0
+                reasons    = []
+                if f[1] > 0:  base_score += 20; reasons.append(str(int(f[1])) + " after-hours login(s)")
+                if f[6] > 0:  base_score += 30; reasons.append(str(int(f[6])) + " USB attempt(s)")
+                if f[3] > 10: base_score += 15; reasons.append("High file access (" + str(int(f[3])) + " files)")
+                if f[4] > 0:  base_score += 25; reasons.append("Removable media write detected")
+                if f[7] > 5:  base_score += 10; reasons.append("High email activity (" + str(int(f[7])) + " emails)")
+                risk_score = min(100, base_score)
+                risk_level = "HIGH" if risk_score >= 70 else ("MEDIUM" if risk_score >= 40 else "LOW")
+                if not reasons: reasons.append("Normal behavior detected")
+                results.append({
+                    "email": email, "name": name,
+                    "risk_score": risk_score, "risk_level": risk_level,
+                    "reason": ", ".join(reasons), "flagged": risk_score >= 70
+                })
+            except Exception:
+                results.append({
+                    "email": email, "name": name,
+                    "risk_score": 0, "risk_level": "LOW",
+                    "reason": "Insufficient data", "flagged": False
+                })
+        results.sort(key=lambda x: x["risk_score"], reverse=True)
+        return jsonify(results)
+    return ai_risk_scores()
+
+
+@app.route("/api/ai/summary")
+@login_required(roles=["manager", "admin"])
+def ai_summary():
+    """Summary stats for AI Risk Engine panel header"""
+    employees = get_all_employees()
+    high = medium = low = flagged = 0
+    try:
+        for emp in employees:
+            email = emp.get("email", "")
+            try:
+                features   = build_employee_features(email)
+                f          = features
+                base_score = 0
+                if f[1] > 0:  base_score += 20
+                if f[6] > 0:  base_score += 30
+                if f[3] > 10: base_score += 15
+                if f[4] > 0:  base_score += 25
+                if f[7] > 5:  base_score += 10
+                risk_score = min(100, base_score)
+                if risk_score >= 70:   high    += 1
+                elif risk_score >= 40: medium  += 1
+                else:                  low     += 1
+                if risk_score >= 70:   flagged += 1
+            except Exception:
+                low += 1
+    except Exception:
+        pass
+    return jsonify({
+        "total":   len(employees),
+        "high":    high,
+        "medium":  medium,
+        "low":     low,
+        "flagged": flagged
+    })
+
+
+@app.route("/api/ai/alerts")
+@login_required(roles=["manager", "admin"])
+def ai_alerts():
+    """Return AI alerts from ai_alerts collection"""
+    try:
+        from models.user import db
+        alerts = list(db["ai_alerts"].find(
+            {"acknowledged": {"$ne": True}},
+            {"_id": 1, "email": 1, "message": 1, "risk_level": 1,
+             "created_at": 1, "type": 1}
+        ).sort("created_at", -1).limit(50))
+        for a in alerts:
+            a["_id"] = str(a["_id"])
+            if hasattr(a.get("created_at"), "strftime"):
+                a["created_at"] = a["created_at"].strftime("%Y-%m-%d %H:%M")
+        return jsonify(alerts)
+    except Exception as e:
+        return jsonify([])
+
+
+@app.route("/api/ai/alerts/<alert_id>/ack", methods=["POST"])
+@login_required(roles=["manager", "admin"])
+def ai_alert_ack(alert_id):
+    """Acknowledge an AI alert"""
+    try:
+        from models.user import db
+        from bson import ObjectId
+        db["ai_alerts"].update_one(
+            {"_id": ObjectId(alert_id)},
+            {"$set": {"acknowledged": True}}
+        )
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/ai/run-scan", methods=["POST"])
+@login_required(roles=["manager", "admin"])
+def ai_run_scan():
+    """Manually trigger the ML scheduler pipeline"""
+    try:
+        from ml.scheduler import start_scheduler
+        # Try run_pipeline_once if available, else restart scheduler
+        import ml.scheduler as _sched
+        if hasattr(_sched, 'run_pipeline_once'):
+            _sched.run_pipeline_once(socketio_instance=socketio)
+        else:
+            start_scheduler(socketio_instance=socketio)
+        return jsonify({"ok": True, "message": "Scan triggered successfully."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ── end /api/ai/* aliases ───────────────────────────────────────────────────
 
 
 # ===============================================================
@@ -3126,6 +3264,14 @@ def employee_notifications():
 
 # --- Run ----------------------------------------------------------------------
 
+# Start scheduler outside __main__ so gunicorn (Render) also runs it
+try:
+    from ml.scheduler import start_scheduler
+    start_scheduler(socketio_instance=socketio)
+    print("[APP] ML scheduler started.")
+except Exception as _sched_err:
+    print("[APP] Scheduler start error: " + str(_sched_err))
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
@@ -3136,7 +3282,5 @@ if __name__ == "__main__":
         sys.exit(1)
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
-    from ml.scheduler import start_scheduler
-    start_scheduler(socketio_instance=socketio)
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False)   
+    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False)
