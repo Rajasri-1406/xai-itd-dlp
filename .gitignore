@@ -17,3 +17,9 @@ explore.py
 backup.py
 train_model.py
 uploads/
+.env
+__pycache__/
+*.pyc
+*.pkl
+*.pt
+uploads/

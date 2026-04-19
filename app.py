@@ -3136,4 +3136,5 @@ if __name__ == "__main__":
     print("[APP] Visit: http://127.0.0.1:5000")
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False)   
