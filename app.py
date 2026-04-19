@@ -63,6 +63,10 @@ from models.user import (
 )
 
 app = Flask(__name__)
+# Debug: print MONGO_URI on startup to confirm env var is loaded
+import os as _os
+print("[STARTUP] MONGO_URI starts with:", (_os.environ.get("MONGO_URI","NOT SET"))[:40])
+print("[STARTUP] FLASK_ENV:", _os.environ.get("FLASK_ENV", "NOT SET"))
 app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
 
