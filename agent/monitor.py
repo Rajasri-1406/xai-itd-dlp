@@ -659,6 +659,17 @@ if WATCHDOG:
             if not event.is_directory and self._is_sensitive(event.src_path):
                 report("FILE_MODIFIED", f"Modified: {os.path.basename(event.src_path)}", risk="MEDIUM")
                 print(f"[AGENT] FILE_MODIFIED: {os.path.basename(event.src_path)}")
+                try:
+                    from dlp.policy_engine import scan_and_enforce
+                    scan_and_enforce(
+                        file_path         = event.src_path,
+                        user_email        = USER_EMAIL,
+                        action_type       = "FILE_MODIFIED",
+                        destination       = "-",
+                        socketio_instance = None
+                    )
+                except Exception as _dlp_err:
+                    print(f"[AGENT] DLP scan error (on_modified): {_dlp_err}")
 
         def on_moved(self, event):
             report("FILE_MOVED",
@@ -675,6 +686,17 @@ if WATCHDOG:
             if not event.is_directory and self._is_sensitive(event.src_path):
                 report("FILE_CREATED", f"Created: {os.path.basename(event.src_path)}", risk="MEDIUM")
                 print(f"[AGENT] FILE_CREATED: {os.path.basename(event.src_path)}")
+                try:
+                    from dlp.policy_engine import scan_and_enforce
+                    scan_and_enforce(
+                        file_path         = event.src_path,
+                        user_email        = USER_EMAIL,
+                        action_type       = "FILE_CREATED",
+                        destination       = "-",
+                        socketio_instance = None
+                    )
+                except Exception as _dlp_err:
+                    print(f"[AGENT] DLP scan error (on_created): {_dlp_err}")
 
 
 def start_file_monitor():

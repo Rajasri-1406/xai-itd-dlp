@@ -31,7 +31,7 @@ def _ser(obj):
             if isinstance(v, ObjectId):
                 out[k] = str(v)
             elif isinstance(v, datetime):
-                out[k] = v.strftime("%Y-%m-%d %H:%M:%S")
+                out[k] = v.strftime("%Y-%m-%dT%H:%M:%S")
             elif isinstance(v, (dict, list)):
                 out[k] = _ser(v)
             else:
@@ -217,8 +217,15 @@ def get_meetings():
     if role != "admin":
         query["$or"] = [{"host_email": email}, {"invited": email}]
 
-    meetings = list(_col("meetings").find(query).sort("scheduled_time", 1))
-    return jsonify(_ser(meetings))
+    raw = list(_col("meetings").find(query))
+    # Sort: active first, then scheduled by time asc, then ended last
+    def _sort_key(m):
+        order = {"active": 0, "scheduled": 1, "ended": 2}
+        st = m.get("scheduled_time")
+        t = st.timestamp() if hasattr(st, "timestamp") else 0
+        return (order.get(m.get("status", "scheduled"), 1), t)
+    raw.sort(key=_sort_key)
+    return jsonify(_ser(raw))
 
 
 # ─── GET SINGLE MEETING ───────────────────────────────────────────────────────
@@ -347,8 +354,9 @@ def list_users_for_invite():
 
     email = active_tokens[token]
     from models.user import users_col
+    # is_active may not be set on all users — use $ne False to include unset
     docs = list(users_col.find(
-        {"is_active": True, "email": {"$ne": email}},
+        {"is_active": {"$ne": False}, "email": {"$ne": email}},
         {"_id": 0, "name": 1, "email": 1, "role": 1, "department": 1}
     ))
     return jsonify(docs)

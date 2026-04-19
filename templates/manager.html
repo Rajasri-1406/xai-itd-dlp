@@ -437,6 +437,10 @@
     <i class="fas fa-brain"></i> AI Risk Engine
     <span class="nav-badge-dlp" id="high-risk-badge" style="display:none">0</span>
   </div>
+  <div class="nav-item-dlp" onclick="showPanel('dlp')" data-p="dlp">
+    <i class="fas fa-shield-virus"></i> DLP Violations
+    <span class="nav-badge-dlp" id="dlp-badge" style="display:none">0</span>
+  </div>
 
   <div class="slabel-dlp">Management</div>
   <div class="nav-item-dlp" onclick="showPanel('users')" data-p="users"><i class="fas fa-users"></i> Employees</div>
@@ -531,8 +535,8 @@
 
     <div class="table-wrap danger">
       <table>
-        <thead><tr><th>Timestamp</th><th>Action</th><th>Employee</th><th>Detail</th><th>Location</th><th>Status</th></tr></thead>
-        <tbody id="sec-body"><tr><td colspan="6" class="empty-state">Loading...</td></tr></tbody>
+        <thead><tr><th>Timestamp</th><th>Action</th><th>Employee</th><th>Detail</th><th>Location</th><th>Status</th><th>Explain</th></tr></thead>
+        <tbody id="sec-body"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -970,8 +974,35 @@
 
     <!-- AI RISK ENGINE TAB -->
   <div class="section-dlp" id="tab-airisk">
-    <div class="section-title">AI Risk Engine — Explainable Insider Threat Scoring</div>
+
+    <!-- Header row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div class="section-title" style="margin-bottom:0;">AI Risk Engine — Explainable Insider Threat Scoring</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="ai-last-scan" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;"></span>
+        <button onclick="triggerManualScan()" id="ai-scan-btn" class="btn-small" style="display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-rotate-right"></i> Run Scan Now
+        </button>
+        <button onclick="loadAIAlerts()" class="btn-small" style="display:flex;align-items:center;gap:6px;position:relative;">
+          <i class="fas fa-bell"></i> Alerts
+          <span id="ai-alert-badge" style="display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;margin-left:2px;font-family:'Share Tech Mono',monospace;"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary bar -->
     <div id="ai-risk-summary"></div>
+
+    <!-- Alerts panel (hidden by default) -->
+    <div id="ai-alerts-panel" style="display:none;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">Unacknowledged Alerts</div>
+        <button onclick="document.getElementById('ai-alerts-panel').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="ai-alerts-list"></div>
+    </div>
+
+    <!-- Employee risk cards -->
     <div id="ai-risk-cards" class="ai-cards-grid">
       <div class="empty-state" style="padding:40px">Click the AI Risk Engine tab to load scores.</div>
     </div>
@@ -1109,6 +1140,47 @@
     </div>
   </div>
 
+  <!-- DLP VIOLATIONS PANEL -->
+  <div class="section-dlp" id="tab-dlp">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div class="section-title" style="margin-bottom:0;"><i class="fas fa-shield-virus"></i> DLP Violations</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">
+          <input type="checkbox" id="dlp-show-all" onchange="loadDLPEvents()" style="margin-right:4px;">Show resolved
+        </label>
+        <button onclick="loadDLPEvents()" class="btn-small" style="display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-rotate-right"></i> Refresh
+        </button>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;" id="dlp-table">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">EMPLOYEE</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">FILENAME</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">SENSITIVITY</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">ACTION</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">PATTERNS DETECTED</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;">TIME</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:1px;"></th>
+          </tr>
+        </thead>
+        <tbody id="dlp-table-body">
+          <tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;font-family:'Share Tech Mono',monospace;">Click DLP Violations to load events.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Expanded detail panel (hidden by default) -->
+    <div id="dlp-detail-panel" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);">EVENT DETAIL</div>
+        <button onclick="document.getElementById('dlp-detail-panel').style.display='none'" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="dlp-detail-content"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1129,6 +1201,42 @@ socket.on("reconnect", function() {
 
 socket.on("connect_error", function(err) {
   console.warn("[Socket] Connection error:", err.message);
+});
+
+socket.on("dlp_alert", function(data) {
+  var msg = '[DLP ALERT] ' + data.user_email + ' — ' + data.sensitivity_level +
+            ' file ' + data.action + ' · Risk: ' + data.risk_label;
+  console.warn(msg);
+
+  // Show toast notification
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;top:60px;right:20px;z-index:99999;' +
+    'background:var(--surface);border:1px solid var(--red);border-left:4px solid var(--red);' +
+    'border-radius:8px;padding:12px 16px;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.2);' +
+    'font-family:\'Share Tech Mono\',monospace;font-size:11px;cursor:pointer;';
+  toast.innerHTML =
+    '<div style="color:var(--red);font-weight:700;letter-spacing:1px;margin-bottom:4px;">' +
+      '⚠ DLP ' + data.action + '</div>' +
+    '<div style="color:var(--text);">' + data.user_email + '</div>' +
+    '<div style="color:var(--muted);font-size:10px;margin-top:3px;">' +
+      data.sensitivity_level + ' sensitivity · AI risk: ' + data.risk_label + '</div>' +
+    '<div style="color:var(--muted);font-size:9px;margin-top:3px;">' + data.reason + '</div>';
+  toast.onclick = function() {
+    document.body.removeChild(toast);
+    showPanel('dlp');
+  };
+  document.body.appendChild(toast);
+  setTimeout(function() {
+    if (toast.parentNode) document.body.removeChild(toast);
+  }, 8000);
+
+  // Update DLP badge
+  var badge = document.getElementById('dlp-badge');
+  if (badge) {
+    var cur = parseInt(badge.textContent) || 0;
+    badge.textContent = cur + 1;
+    badge.style.display = 'inline';
+  }
 });
 let currentLocations = [];
 let allEmployees = [];
@@ -1159,39 +1267,117 @@ async function loadFeed() {
   } catch(e) { console.error('Feed:', e); }
 }
 
+var _xaiFeedMap = {};
+var _xaiFeedIdx = 0;
+
 function addFeedRow(time, type, detail, user, location, risk, isNew, isBlocked) {
   const feed = document.getElementById('event-feed');
   if (feed.querySelector('.empty-state')) feed.innerHTML = '';
   const div = document.createElement('div');
   const riskClass = isBlocked ? 'BLOCKED' : risk;
   div.className = 'event-item' + (isNew?' new':'') + (risk==='HIGH'?' high-risk':'') + (isBlocked?' blocked-ev':'');
+
+  var xaiText = {
+    'LOCATION_BLOCKED':       'Login was blocked because the detected city is not in the approved location list. Employees can only login from pre-approved zones set by the manager.',
+    'DEVICE_MISMATCH':        'The employee logged in from an unrecognised device. The browser, OS, or timezone changed from the enrolled profile. May indicate account compromise.',
+    'IMPOSSIBLE_TRAVEL':      'Two logins were recorded from locations that are physically impossible to travel between in the elapsed time. Strongly suggests credential sharing or account compromise.',
+    'USB_INSERTED':           'A USB or removable storage device was plugged into the workstation. USB access is blocked by DLP policy to prevent data exfiltration to external drives.',
+    'PHONE_DETECTED':         'The webcam system detected a mobile phone photographing the screen while a file was open. All files were closed automatically and the incident was logged.',
+    'FILE_BLOCKED_NO_CAMERA': 'The employee tried to open a file without a webcam. A working webcam is required for surveillance compliance during all file viewing sessions.',
+    'VIRUS_DETECTED':         'A file uploaded by this employee contained malware, an executable header, or VBA macro code. The file was blocked and never stored on the server.',
+    'VIRUS_UPLOAD_BLOCKED':   'An infected file was blocked before reaching the server. The heuristic scanner found dangerous patterns inside the file content.',
+    'EMAIL_SENSITIVE_BLOCKED':'An email was blocked because it contained sensitive keywords — passwords, card numbers, salary data, or confidential terms.',
+    'EMAIL_BLOCKED':          'An internal email was blocked by the DLP engine due to sensitive content in the message body.',
+    'CLOUD_UPLOAD_PENDING':   'A file upload was flagged by DLP and sent for approval. It may contain sensitive data, a blocked file type, or exceed the size limit for this role.',
+    'CLOUD_COUNT_VIOLATION':  'The employee tried to upload more files at once than their role permits. Bulk uploads are monitored as a potential data-exfiltration pattern.',
+    'SCREENSHOT_BLOCKED':     'A screenshot attempt was detected while a file was open. Screenshot capture is blocked by DLP policy during file viewing sessions.',
+    'SESSION_EXTEND_REQUEST': "The employee's 5-minute session timer was expiring and they requested an extension. Manager approval is needed to continue without re-login.",
+    'LOGIN_SUCCESS':          'The employee completed OTP verification and gained dashboard access. Location, device, and travel signals were all checked at login time.',
+  };
+
+  var explanation = xaiText[type] || ('This event was logged for security monitoring. Type: ' + type + '. Detail: ' + detail);
+  var idx = 'xai_' + (++_xaiFeedIdx);
+  _xaiFeedMap[idx] = { text: explanation, title: type + ' — WHY?' };
+
   div.innerHTML =
-    '<span class="ev-time">'   + time     + '</span>' +
-    '<span class="ev-type">'   + type     + '</span>' +
-    '<span class="ev-detail" title="' + detail + '">' + detail + '</span>' +
-    '<span class="ev-user">'   + user     + '</span>' +
+    '<span class="ev-time">'    + time     + '</span>' +
+    '<span class="ev-type">'    + type     + '</span>' +
+    '<span class="ev-user">'    + user     + '</span>' +
     '<span class="ev-location">'+ location + '</span>' +
-    '<span class="risk-badge risk-' + riskClass + '">' + riskClass + '</span>';
+    '<span class="risk-badge risk-' + riskClass + '">' + riskClass + '</span>' +
+    '<button data-xai="' + idx + '" style="background:none;border:1px solid rgba(26,111,239,0.5);' +
+      'color:#1a6fef;padding:2px 8px;border-radius:4px;cursor:pointer;' +
+      'font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;' +
+      'flex-shrink:0;white-space:nowrap;" title="AI Explanation">WHY?</button>';
+
+  var btn = div.querySelector('button[data-xai]');
+  if (btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var d = _xaiFeedMap[this.getAttribute('data-xai')];
+      if (d) showXAIPopup([d.text], d.title);
+    });
+  }
+
   if (isNew) feed.insertBefore(div, feed.firstChild);
   else feed.appendChild(div);
 }
 
 // ── SECURITY EVENTS ───────────────────────────────────────────────────────────
+var _xaiSecMap = {};
+var _xaiSecIdx = 0;
+
 async function loadSecurityEvents() {
   try {
     const events = await (await fetch('/api/manager/security-events')).json();
     const tbody = document.getElementById('sec-body');
-    if (!events.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No security events.</td></tr>'; return; }
+    if (!events.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No security events.</td></tr>'; return; }
+
+    var secText = {
+      'LOCATION_BLOCKED':       'Login was blocked because the employee\'s detected city is not in their approved location list. Only pre-approved zones are permitted.',
+      'DEVICE_MISMATCH':        'Login from an unrecognised device. Browser, OS, or timezone does not match the enrolled profile. May indicate compromise or a new personal device.',
+      'IMPOSSIBLE_TRAVEL':      'Two logins recorded from locations too far apart for the elapsed time. Strongly suggests credential sharing or account compromise.',
+      'USB_INSERTED':           'A USB device was inserted on the workstation. DLP policy blocks USB access to prevent data exfiltration to external drives.',
+      'PHONE_DETECTED':         'Webcam detected a phone photographing the screen during a file viewing session. Files were closed automatically.',
+      'FILE_BLOCKED_NO_CAMERA': 'Employee tried to open a file without a connected webcam. Webcam is required for surveillance compliance during file viewing.',
+      'VIRUS_DETECTED':         'An uploaded file contained malware, an executable header, or VBA macro code. It was blocked and never stored on the server.',
+      'VIRUS_UPLOAD_BLOCKED':   'An infected file was blocked by the heuristic scanner before reaching the server.',
+      'EMAIL_SENSITIVE_BLOCKED':'An email was blocked because it contained sensitive keywords such as passwords, card numbers, or salary data.',
+      'EMAIL_BLOCKED':          'An internal email was blocked by the DLP engine due to sensitive content in the message body.',
+      'CLOUD_UPLOAD_PENDING':   'A cloud upload was flagged by DLP and queued for manager approval. It contains sensitive data or violates role limits.',
+      'CLOUD_COUNT_VIOLATION':  'Employee tried to upload more files than their role allows. Monitored as a data-exfiltration signal.',
+      'SCREENSHOT_BLOCKED':     'A screenshot attempt was detected during a file viewing session. Screenshot capture is blocked by DLP policy.',
+      'MANAGER_SENSITIVE_EMAIL':'A manager sent an email with sensitive keywords. Logged for audit — manager emails are monitored but not blocked.',
+    };
+
+    _xaiSecMap = {};
+    _xaiSecIdx = 0;
+
     tbody.innerHTML = events.map(function(e) {
+      var text = secText[e.action] || ('Security event logged for audit. Type: ' + (e.action||'UNKNOWN') + '. Detail: ' + (e.detail||'none'));
+      var idx = 'sec_' + (++_xaiSecIdx);
+      _xaiSecMap[idx] = { text: text, title: (e.action||'EVENT') + ' — WHY?' };
       return '<tr>' +
         '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted)">' + (e.timestamp||'—') + '</td>' +
-        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--blue)">'         + (e.action||'—')    + '</td>' +
-        '<td style="font-size:12px">'                                                              + (e.user_email||'—')+ '</td>' +
-        '<td style="font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.detail||'—') + '</td>' +
-        '<td style="font-size:11px;color:var(--muted)">'                                           + (e.location||'—') + '</td>' +
-        '<td><span class="blocked-badge">'                                                         + (e.status||'BLOCKED') + '</span></td>' +
+        '<td style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--blue)">'  + (e.action||'—')    + '</td>' +
+        '<td style="font-size:12px">'                                                               + (e.user_email||'—')+ '</td>' +
+        '<td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + (e.detail||'') + '">' + (e.detail||'—') + '</td>' +
+        '<td style="font-size:11px;color:var(--muted)">'                                            + (e.location||'—') + '</td>' +
+        '<td><span class="blocked-badge">'                                                          + (e.status||'BLOCKED') + '</span></td>' +
+        '<td><button data-xaisec="' + idx + '" style="background:none;border:1px solid rgba(26,111,239,0.5);' +
+          'color:#1a6fef;padding:3px 10px;border-radius:4px;cursor:pointer;' +
+          'font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;">WHY?</button></td>' +
         '</tr>';
     }).join('');
+
+    tbody.querySelectorAll('button[data-xaisec]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var d = _xaiSecMap[this.getAttribute('data-xaisec')];
+        if (d) showXAIPopup([d.text], d.title);
+      });
+    });
+
   } catch(e) { console.error('SecEvents:', e); }
 }
 
@@ -2207,6 +2393,7 @@ async function mgrLoadPendingApprovals() {
     }
     el.innerHTML = reqs.map(function(r){
       var rid = r._id||'';
+      var xaiDivId = 'xai-appr-' + (rid||'').replace(/[^a-z0-9]/gi,'');
       return '<div class="mgr-approval-card">'+
         '<div class="mgr-approval-card-info">'+
           '<div style="font-weight:700;font-size:13px;color:var(--blue);">'+escHtmlMgr(r.file_name||'—')+'</div>'+
@@ -2216,10 +2403,18 @@ async function mgrLoadPendingApprovals() {
             (r.forward_to ? ' &bull; to <span style="color:var(--blue)">'+escHtmlMgr(r.forward_to)+'</span>' : '')+
             ' &bull; '+escHtmlMgr(r.requested_at||'—')+
           '</div>'+
+          '<div id="'+xaiDivId+'" style="margin-top:8px;"></div>'+
         '</div>'+
-        '<div style="display:flex;gap:8px;flex-shrink:0;">'+
-          '<button onclick="mgrResolveApproval(\''+rid+'\',\'approved\')" style="background:transparent;border:1px solid var(--green);color:var(--green);padding:7px 18px;border-radius:7px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:1px;" onmouseover="this.style.background=\'rgba(0,255,136,0.1)\'" onmouseout="this.style.background=\'transparent\'">✓ APPROVE</button>'+
-          '<button onclick="mgrResolveApproval(\''+rid+'\',\'rejected\')" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:7px 18px;border-radius:7px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:1px;" onmouseover="this.style.background=\'rgba(255,51,102,0.1)\'" onmouseout="this.style.background=\'transparent\'">✗ DENY</button>'+
+        '<div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;">'+
+          '<button onclick="mgrShowXAIForApproval(\''+rid+'\')" '+
+            'style="background:transparent;border:1px solid #1a6fef;color:#1a6fef;padding:5px 14px;border-radius:6px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:1px;display:flex;align-items:center;gap:5px;" '+
+            'onmouseover="this.style.background=\'rgba(26,111,239,0.08)\'" onmouseout="this.style.background=\'transparent\'">'+
+            '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>'+
+            ' WHY FLAGGED?</button>'+
+          '<div style="display:flex;gap:8px;">'+
+            '<button onclick="mgrResolveApproval(\''+rid+'\',\'approved\')" style="background:transparent;border:1px solid var(--green);color:var(--green);padding:7px 18px;border-radius:7px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:1px;" onmouseover="this.style.background=\'rgba(0,255,136,0.1)\'" onmouseout="this.style.background=\'transparent\'">✓ APPROVE</button>'+
+            '<button onclick="mgrResolveApproval(\''+rid+'\',\'rejected\')" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:7px 18px;border-radius:7px;cursor:pointer;font-family:Share Tech Mono,monospace;font-size:11px;letter-spacing:1px;" onmouseover="this.style.background=\'rgba(255,51,102,0.1)\'" onmouseout="this.style.background=\'transparent\'">✗ DENY</button>'+
+          '</div>'+
         '</div>'+
       '</div>';
     }).join('');
@@ -2244,6 +2439,101 @@ async function mgrResolveApproval(rid, status) {
 
 function escHtmlMgr(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+/* ══════════════════════════════════════════════════════════════
+   XAI POPUP ENGINE (manager)
+   showXAIPopup(sentences, title) — reused across all manager events
+══════════════════════════════════════════════════════════════ */
+function showXAIPopup(sentences, title) {
+  var old = document.getElementById('xai-popup-overlay');
+  if (old) old.remove();
+
+  var list = Array.isArray(sentences) ? sentences : [sentences];
+  var level = 'HIGH';
+  if (title && title.indexOf('MEDIUM') !== -1) level = 'MEDIUM';
+  if (title && title.indexOf('LOW') !== -1)    level = 'LOW';
+  if (title && title.indexOf('CRITICAL') !== -1) level = 'CRITICAL';
+
+  var hc = {HIGH:'#e0253a', MEDIUM:'#e08a00', LOW:'#0f9e6e', CRITICAL:'#b00000'}[level] || '#1a6fef';
+  var ic = {HIGH:'#fff3f3', MEDIUM:'#fffbf0', LOW:'#f0fdf7', CRITICAL:'#fff0f0'}[level] || '#f0f4ff';
+  var bc = hc;
+  var ico= {HIGH:'⚠', MEDIUM:'⚠', LOW:'ℹ', CRITICAL:'🚨'}[level] || '⚠';
+
+  var scoreMatch = title && title.match(/(\d+)\/100/);
+  var scoreHtml = '';
+  if (scoreMatch) {
+    var score = parseInt(scoreMatch[1]);
+    scoreHtml =
+      '<div style="margin:0 22px 16px;padding:12px 16px;background:#f8f9ff;border-radius:10px;border:1px solid #dde3f5;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:#6b7fa8;letter-spacing:2px;">AI RISK SCORE</span>' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:18px;font-weight:700;color:' + hc + ';">' + score + '/100</span>' +
+        '</div>' +
+        '<div style="background:#e8eaf6;border-radius:4px;height:7px;overflow:hidden;">' +
+          '<div style="width:' + score + '%;height:100%;background:' + hc + ';border-radius:4px;"></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var overlay = document.createElement('div');
+  overlay.id = 'xai-popup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,30,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:16px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 72px rgba(26,111,239,0.25);">' +
+      '<div style="background:' + hc + ';border-radius:16px 16px 0 0;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="display:flex;align-items:center;gap:12px;">' +
+          '<div style="width:34px;height:34px;background:rgba(255,255,255,0.22);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;">' + ico + '</div>' +
+          '<div>' +
+            '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:rgba(255,255,255,0.75);letter-spacing:2px;margin-bottom:2px;">AI EXPLANATION — SHAP MODEL</div>' +
+            '<div style="font-family:\'Share Tech Mono\',monospace;font-size:12px;color:#fff;font-weight:700;letter-spacing:1px;">' + (title || 'WHY THIS WAS FLAGGED') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'xai-popup-overlay\').remove()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>' +
+      '</div>' +
+      scoreHtml +
+      '<div style="padding:' + (scoreHtml?'0':'22px') + ' 22px 22px;">' +
+        '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:#6b7fa8;letter-spacing:2px;margin-bottom:12px;">REASON' + (list.length>1?'S':'') + ' FOR THIS DECISION</div>' +
+        '<ul style="list-style:none;padding:0;margin:0;">' +
+          list.map(function(s) {
+            return '<li style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:9px;background:' + ic + ';border-left:3px solid ' + bc + ';margin-bottom:9px;font-family:Rajdhani,sans-serif;font-size:14px;color:#1a2340;line-height:1.6;">' +
+              '<span style="font-size:13px;flex-shrink:0;margin-top:2px;color:' + bc + ';">' + ico + '</span>' +
+              '<span>' + s + '</span>' +
+            '</li>';
+          }).join('') +
+        '</ul>' +
+        '<div style="margin-top:14px;padding:10px 14px;background:#eef2ff;border-radius:8px;display:flex;align-items:center;gap:8px;">' +
+          '<svg width="14" height="14" fill="none" stroke="#6b7fa8" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:#6b7fa8;letter-spacing:0.5px;">Powered by SHAP (SHapley Additive Explanations) — real model reasoning.</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+}
+
+/* ── XAI for approval cards: fetch explanation then show popup ── */
+function mgrShowXAIForApproval(requestId) {
+  fetch('/api/xai/explain-file', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-Auth-Token': SESSION_TOKEN},
+    body: JSON.stringify({
+      email: '', filename: '', file_size_mb: 0, role: 'employee',
+      alerts: [], folder: '', total_files: 1, role_max_mb: 10, role_max_files: 2,
+      found_keywords: [], upload_count_1h_raw: 0
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var sentences = d.explanation && d.explanation.length ? d.explanation : ['No detailed explanation available for this request.'];
+    var score = d.risk_score || 0;
+    var lvl   = d.risk_level || 'MEDIUM';
+    showXAIPopup(sentences, 'FILE FLAGGED — RISK: ' + lvl + ' (' + score + '/100)');
+  })
+  .catch(function(){
+    showXAIPopup(['Could not load AI explanation. Please review the DLP alerts manually.'], 'FILE FLAGGED');
+  });
+}
 
 // ── REAL-TIME ─────────────────────────────────────────────────────────────────
 socket.on('new_event', function(data) {
@@ -2277,6 +2567,32 @@ socket.on('new_approval_request', function(data) {
   setTimeout(function() { toast.remove(); }, 8000);
 });
 
+/* ── XAI in real-time upload_approval_request socket ── */
+socket.on('upload_approval_request', function(data) {
+  var badge = document.getElementById('mgr-pending-badge');
+  if(badge){ var cur=parseInt(badge.textContent||'0'); badge.textContent=cur+1; badge.style.display=''; }
+  if(_mgrCurrentSection==='approvals') mgrLoadPendingApprovals();
+
+  var xai = data.xai || {};
+  var score = xai.risk_score || 0;
+  var lvl   = xai.risk_level || 'MEDIUM';
+  var explanations = xai.explanation || [];
+
+  var toast = document.createElement('div');
+  toast.className = 'toast blocked-t';
+  toast.style.cursor = 'pointer';
+  toast.innerHTML =
+    '<div class="toast-title">UPLOAD REQUIRES APPROVAL</div>' +
+    '<div style="color:var(--text);margin-bottom:8px;"><strong>' + escHtmlMgr(data.user_email||'') + '</strong> uploaded file(s) to <em>' + escHtmlMgr(data.folder||'') + '</em></div>' +
+    (score ? '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--yellow);margin-bottom:6px;">AI RISK: ' + lvl + ' (' + score + '/100)</div>' : '') +
+    (explanations.length ?
+      '<button onclick="showXAIPopup(' + JSON.stringify(explanations) + ', \'UPLOAD RISK: ' + lvl + ' (' + score + '/100)\')" ' +
+      'style="background:rgba(26,111,239,0.12);border:1px solid rgba(26,111,239,0.4);color:#1a6fef;padding:4px 12px;border-radius:5px;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:10px;letter-spacing:1px;">WHY FLAGGED?</button>'
+      : '');
+  document.getElementById('toast-container').appendChild(toast);
+  setTimeout(function(){ if(toast.parentNode) toast.remove(); }, 12000);
+});
+
 function showToast(data, isBlocked) {
   var toast = document.createElement('div');
   toast.className = 'toast ' + (isBlocked ? 'blocked-t' : 'high');
@@ -2304,7 +2620,7 @@ window.showPanel = function showPanel(name) {
   if (navItem) navItem.classList.add('active');
   var bcEl = document.getElementById('bcPage');
   if (bcEl) {
-    var labels = {overview:'Overview',feed:'Live Feed',security:'Security Events',locations:'Location Policy',users:'Employees',files:'Files',airisk:'AI Risk Engine',email:'Email'};
+    var labels = {overview:'Overview',feed:'Live Feed',security:'Security Events',locations:'Location Policy',users:'Employees',files:'Files',airisk:'AI Risk Engine',email:'Email',dlp:'DLP Violations'};
     bcEl.textContent = labels[name] || name;
   }
   if (name === 'security')  { loadSecurityEvents(); renderExtPanel(); }
@@ -2320,10 +2636,186 @@ window.showPanel = function showPanel(name) {
   if (name === 'airisk')    loadAIRiskScores();
   if (name === 'feed')      loadFeed();
   if (name === 'email')     { mgrEmLoadView(); mgrEmUpdateUnreadBadge(); }
+  if (name === 'dlp')       loadDLPEvents();
 }
 
 // ── TABS (legacy alias) ───────────────────────────────────────────────────────
 window.switchTab = function switchTab(name, btn) { showPanel(name); };
+
+// ── DLP VIOLATIONS ────────────────────────────────────────────────────────────
+function loadDLPEvents() {
+  var tbody   = document.getElementById('dlp-table-body');
+  var showAll = document.getElementById('dlp-show-all') && document.getElementById('dlp-show-all').checked;
+  tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;font-family:\'Share Tech Mono\',monospace;">⏳ Loading DLP events...</td></tr>';
+
+  var url = '/api/dlp/events' + (showAll ? '?all=true' : '');
+  fetch(url, { headers: { 'X-Auth-Token': SESSION_TOKEN } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.success || !data.events || data.events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:12px;">No DLP violations found.</td></tr>';
+        var badge = document.getElementById('dlp-badge');
+        if (badge) { badge.style.display = 'none'; }
+        return;
+      }
+
+      var badge = document.getElementById('dlp-badge');
+      if (badge) {
+        var unresolved = data.events.filter(function(e) { return !e.resolved; }).length;
+        if (unresolved > 0) { badge.textContent = unresolved; badge.style.display = 'inline'; }
+        else { badge.style.display = 'none'; }
+      }
+
+      var sensColor = { 'CRITICAL':'var(--red)', 'HIGH':'var(--orange)', 'MEDIUM':'var(--yellow)', 'LOW':'var(--green)' };
+      var actColor  = { 'BLOCKED':'var(--red)', 'WARNED':'var(--orange)', 'ALLOWED':'var(--green)', 'APPROVAL_REQUIRED':'var(--orange)' };
+
+      tbody.innerHTML = data.events.map(function(ev) {
+        var sc = sensColor[ev.sensitivity_level] || 'var(--muted)';
+        var ac = actColor[ev.action_taken] || 'var(--muted)';
+        var patterns = (ev.matched_patterns || []).slice(0, 2).join(', ');
+        if ((ev.matched_patterns || []).length > 2) patterns += ' +' + (ev.matched_patterns.length - 2) + ' more';
+        var resolvedStyle = ev.resolved ? 'opacity:0.45;' : '';
+        var emailShort = (ev.user_email || '').split('@')[0];
+
+        return '<tr style="border-bottom:1px solid var(--border);cursor:pointer;' + resolvedStyle + '" onclick="showDLPDetail(' + JSON.stringify(ev).replace(/'/g, "\\'") + ')" onmouseover="this.style.background=\'var(--surface2)\'" onmouseout="this.style.background=\'\';">' +
+          '<td style="padding:10px 14px;font-size:12px;color:var(--text);">' + emailShort + '</td>' +
+          '<td style="padding:10px 14px;font-size:11px;font-family:\'Share Tech Mono\',monospace;color:var(--text);">' + (ev.filename || '-') + '</td>' +
+          '<td style="padding:10px 14px;"><span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;font-weight:700;color:' + sc + ';">' + (ev.sensitivity_level || '-') + '</span></td>' +
+          '<td style="padding:10px 14px;"><span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;font-weight:700;color:' + ac + ';">' + (ev.action_taken || '-') + '</span></td>' +
+          '<td style="padding:10px 14px;font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (patterns || 'keywords only') + '</td>' +
+          '<td style="padding:10px 14px;font-size:10px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;">' + (ev.timestamp || '-').substring(0, 16) + '</td>' +
+          '<td style="padding:10px 14px;">' +
+            (!ev.resolved ?
+              '<button onclick="event.stopPropagation();resolveDLPEvent(\'' + ev._id + '\', this)" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:9px;padding:3px 8px;border-radius:4px;cursor:pointer;" onmouseover="this.style.borderColor=\'var(--green)\';this.style.color=\'var(--green)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">Resolve</button>' :
+              '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--green);">✓ Resolved</span>'
+            ) +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    })
+    .catch(function(err) {
+      tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--red);font-family:\'Share Tech Mono\',monospace;">' + err + '</td></tr>';
+    });
+}
+
+function showDLPDetail(ev) {
+  var panel   = document.getElementById('dlp-detail-panel');
+  var content = document.getElementById('dlp-detail-content');
+  panel.style.display = 'block';
+
+  var sensColor = { 'CRITICAL':'var(--red)', 'HIGH':'var(--orange)', 'MEDIUM':'var(--yellow)', 'LOW':'var(--green)' };
+  var actColor  = { 'BLOCKED':'var(--red)', 'WARNED':'var(--orange)', 'ALLOWED':'var(--green)' };
+  var sc = sensColor[ev.sensitivity_level] || 'var(--muted)';
+  var ac = actColor[ev.action_taken] || 'var(--muted)';
+
+  var linesHtml = '';
+  if (ev.matched_lines && ev.matched_lines.length > 0) {
+    linesHtml = '<div style="margin-top:12px;">' +
+      '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:8px;">MATCHED LINES</div>' +
+      ev.matched_lines.map(function(ml) {
+        return '<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:4px;padding:8px 12px;margin-bottom:6px;font-family:\'Share Tech Mono\',monospace;font-size:11px;">' +
+          '<span style="color:var(--muted);margin-right:8px;">Line ' + ml.line_no + '</span>' +
+          '<span style="color:var(--orange);margin-right:8px;">[' + ml.pattern + ']</span>' +
+          '<span style="color:var(--text);">' + ml.snippet + '</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }
+
+  var policyHtml = '';
+  if (ev.policy_decision) {
+    var pd = ev.policy_decision;
+    policyHtml = '<div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;">' +
+      '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;">POLICY DECISION</div>' +
+      '<div style="font-size:12px;color:var(--text);">' + (pd.reason || '-') + '</div>' +
+      '<div style="margin-top:4px;font-size:10px;font-family:\'Share Tech Mono\',monospace;color:var(--muted);">Role: ' + (pd.role || '-') + ' · AI Risk: ' + (pd.risk_label || '-') + ' (' + parseFloat(pd.risk_score || 0).toFixed(1) + ')</div>' +
+    '</div>';
+  }
+
+  content.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">' +
+      _detailRow('Employee',    ev.user_email   || '-') +
+      _detailRow('Filename',    ev.filename     || '-') +
+      _detailRow('Full Path',   ev.file_path    || '-') +
+      _detailRow('File Size',   (ev.file_size_kb || 0) + ' KB') +
+      _detailRow('Action Type', ev.action_type  || '-') +
+      _detailRow('Destination', ev.destination  || '-') +
+      _detailRow('Sensitivity', '<span style="color:' + sc + ';font-weight:700;">' + (ev.sensitivity_level || '-') + '</span>') +
+      _detailRow('Action Taken','<span style="color:' + ac + ';font-weight:700;">' + (ev.action_taken || '-') + '</span>') +
+      _detailRow('Timestamp',   (ev.timestamp || '-')) +
+      _detailRow('Resolved',    ev.resolved ? '✓ Yes — by ' + (ev.resolved_by || '?') : 'No') +
+    '</div>' +
+    linesHtml +
+    policyHtml;
+
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _detailRow(label, value) {
+  return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;">' +
+    '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;">' + label.toUpperCase() + '</div>' +
+    '<div style="font-size:12px;color:var(--text);word-break:break-all;">' + value + '</div>' +
+  '</div>';
+}
+
+function resolveDLPEvent(eventId, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+  fetch('/api/dlp/events/' + eventId + '/resolve', {
+    method: 'POST',
+    headers: { 'X-Auth-Token': SESSION_TOKEN }
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        loadDLPEvents();
+        var panel = document.getElementById('dlp-detail-panel');
+        if (panel) panel.style.display = 'none';
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Resolve';
+        alert('Error: ' + (data.error || 'Unknown error'));
+      }
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = 'Resolve';
+    });
+}
+
+// ── PDF AUDIT REPORT ─────────────────────────────────────────────────────────
+function downloadAuditReport(email) {
+  var btn = event.currentTarget;
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>GENERATING...';
+  btn.disabled = true;
+
+  fetch('/api/xai/report/' + encodeURIComponent(email), {
+    method: 'POST',
+    headers: { 'X-Auth-Token': SESSION_TOKEN }
+  })
+    .then(function(r) {
+      if (!r.ok) throw new Error('Report generation failed');
+      return r.blob();
+    })
+    .then(function(blob) {
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a');
+      a.href   = url;
+      a.download = 'audit_report_' + email.split('@')[0] + '_' + new Date().toISOString().slice(0,10) + '.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    })
+    .catch(function(err) {
+      alert('Report generation failed: ' + err);
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+    });
+}
 
 // ── AI RISK ENGINE ────────────────────────────────────────────────────────────
 function loadAIRiskScores() {
@@ -2331,60 +2823,128 @@ function loadAIRiskScores() {
   var summary   = document.getElementById('ai-risk-summary');
   container.innerHTML = '<div class="empty-state" style="padding:40px">⏳ Loading AI risk scores...</div>';
 
-  fetch('/api/manager/ai-risk-scores', { headers: { 'X-Auth-Token': SESSION_TOKEN } })
+  // Load summary stats first
+  fetch('/api/ai/summary', { headers: { 'X-Auth-Token': SESSION_TOKEN } })
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!Array.isArray(data) || data.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="padding:40px">No employees found.</div>';
-        return;
-      }
+    .then(function(stats) {
+      var lc       = stats.label_counts || {};
+      var critical = lc.CRITICAL || 0;
+      var high     = lc.HIGH     || 0;
+      var medium   = lc.MEDIUM   || 0;
+      var low      = lc.LOW      || 0;
+      var unacked  = stats.unacked_alerts || 0;
 
-      var high   = data.filter(function(e) { return e.risk_level === 'HIGH';   }).length;
-      var medium = data.filter(function(e) { return e.risk_level === 'MEDIUM'; }).length;
-      var low    = data.filter(function(e) { return e.risk_level === 'LOW';    }).length;
-
-      // Update badge
+      // Sidebar badge — show HIGH+CRITICAL count
       var badge = document.getElementById('high-risk-badge');
-      if (high > 0) { badge.textContent = high; badge.style.display = 'inline'; }
+      var danger = critical + high;
+      if (danger > 0) { badge.textContent = danger; badge.style.display = 'inline'; }
       else { badge.style.display = 'none'; }
+
+      // Alert badge on Alerts button
+      var abadge = document.getElementById('ai-alert-badge');
+      if (unacked > 0) { abadge.textContent = unacked; abadge.style.display = 'inline'; }
+      else { abadge.style.display = 'none'; }
+
+      // Last scan time
+      if (stats.last_scan) {
+        var d = new Date(stats.last_scan);
+        document.getElementById('ai-last-scan').textContent =
+          'Last scan: ' + d.toLocaleTimeString();
+      }
 
       // Summary bar
       summary.innerHTML =
-        '<div class="ai-summary-bar">' +
-          '<div class="ai-sum-item red"><span class="ai-sum-val">' + high   + '</span><span class="ai-sum-label">HIGH RISK</span></div>' +
-          '<div class="ai-sum-item yellow"><span class="ai-sum-val">' + medium + '</span><span class="ai-sum-label">MEDIUM RISK</span></div>' +
-          '<div class="ai-sum-item green"><span class="ai-sum-val">' + low    + '</span><span class="ai-sum-label">LOW RISK</span></div>' +
-          '<div class="ai-sum-item blue"><span class="ai-sum-val">' + data.length + '</span><span class="ai-sum-label">TOTAL EMPLOYEES</span></div>' +
+        '<div class="ai-summary-bar" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px;">' +
+          '<div class="ai-sum-item red"   style="border-top:2px solid var(--red);">'   +
+            '<span class="ai-sum-val" style="color:var(--red);">'    + critical + '</span>' +
+            '<span class="ai-sum-label">CRITICAL</span></div>' +
+          '<div class="ai-sum-item red"   style="border-top:2px solid #ff6688;">'  +
+            '<span class="ai-sum-val" style="color:#ff6688;">'      + high     + '</span>' +
+            '<span class="ai-sum-label">HIGH RISK</span></div>' +
+          '<div class="ai-sum-item yellow">' +
+            '<span class="ai-sum-val" style="color:var(--yellow);">' + medium   + '</span>' +
+            '<span class="ai-sum-label">MEDIUM RISK</span></div>' +
+          '<div class="ai-sum-item green">' +
+            '<span class="ai-sum-val" style="color:var(--green);">'  + low      + '</span>' +
+            '<span class="ai-sum-label">LOW RISK</span></div>' +
+          '<div class="ai-sum-item blue">' +
+            '<span class="ai-sum-val" style="color:var(--blue);">'   + stats.total_employees + '</span>' +
+            '<span class="ai-sum-label">TOTAL EMPLOYEES</span></div>' +
         '</div>';
+    })
+    .catch(function() {});
 
-      // Employee cards
+  // Load employee risk scores
+  fetch('/api/ai/risk-scores', { headers: { 'X-Auth-Token': SESSION_TOKEN } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:40px">No employee scores found. Run analyze_behavior.py first.</div>';
+        return;
+      }
+
       container.innerHTML = data.map(function(emp) {
-        var color   = emp.risk_level === 'HIGH' ? 'var(--red)' :
-                      emp.risk_level === 'MEDIUM' ? 'var(--yellow)' : 'var(--green)';
-        var bgColor = emp.risk_level === 'HIGH' ? 'rgba(255,51,102,0.08)' :
-                      emp.risk_level === 'MEDIUM' ? 'rgba(255,204,0,0.08)' : 'rgba(0,255,136,0.06)';
-        var pct     = emp.risk_score + '%';
-        var initials = emp.name ? emp.name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase() : '??';
+        var label   = emp.risk_label || 'LOW';
+        var score   = parseFloat(emp.risk_score || 0).toFixed(1);
+        var color   = label === 'CRITICAL' ? '#ff3366' :
+                      label === 'HIGH'     ? 'var(--red)' :
+                      label === 'MEDIUM'   ? 'var(--yellow)' : 'var(--green)';
+        var bgColor = label === 'CRITICAL' ? 'rgba(255,51,102,0.12)' :
+                      label === 'HIGH'     ? 'rgba(255,51,102,0.08)' :
+                      label === 'MEDIUM'   ? 'rgba(255,204,0,0.08)'  : 'rgba(0,255,136,0.06)';
+        var pct     = Math.min(parseFloat(score), 100) + '%';
+        var initials = (emp.name || emp.user_email || '?').split(' ')
+                        .map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
+
+        // Top features explanation
+        var reason = 'Normal behavior pattern';
+        if (emp.note === 'no_activity') {
+          reason = 'No activity recorded — new or inactive employee';
+        } else if (emp.top_features && emp.top_features.length > 0) {
+          reason = emp.top_features.map(function(f) {
+            return f.feature.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}) +
+                   ' (' + parseFloat(f.z_score).toFixed(1) + 'σ)';
+          }).join(' · ');
+        }
+
+        // Score breakdown tooltip
+        var breakdown =
+          'Anomaly: '   + parseFloat(emp.anomaly_score   || 0).toFixed(1) + ' | ' +
+          'Deviation: ' + parseFloat(emp.deviation_score || 0).toFixed(1) + ' | ' +
+          'Rules: '     + parseFloat(emp.rule_score      || 0).toFixed(1);
 
         return '<div class="ai-emp-card" style="border-color:' + color + '33;background:' + bgColor + '">' +
           '<div class="ai-card-top">' +
             '<div class="ai-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials + '</div>' +
             '<div class="ai-card-info">' +
-              '<div class="ai-emp-name">' + emp.name + '</div>' +
-              '<div class="ai-emp-email" style="color:var(--muted);font-size:11px;font-family:\'Share Tech Mono\',monospace">' + emp.email + '</div>' +
+              '<div class="ai-emp-name">' + (emp.name || emp.user_email) + '</div>' +
+              '<div style="color:var(--muted);font-size:11px;font-family:\'Share Tech Mono\',monospace">' + emp.user_email + '</div>' +
             '</div>' +
-            '<div class="ai-risk-badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + emp.risk_level + '</div>' +
+            '<div class="ai-risk-badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + label + '</div>' +
           '</div>' +
           '<div class="ai-score-row">' +
-            '<span style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted);letter-spacing:1px">RISK SCORE</span>' +
-            '<span style="font-family:\'Share Tech Mono\',monospace;font-size:20px;font-weight:700;color:' + color + '">' + emp.risk_score + '</span>' +
+            '<span style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:var(--muted);letter-spacing:1px" title="' + breakdown + '">RISK SCORE ⓘ</span>' +
+            '<span style="font-family:\'Share Tech Mono\',monospace;font-size:20px;font-weight:700;color:' + color + '">' + score + '</span>' +
           '</div>' +
           '<div class="ai-bar-bg"><div class="ai-bar-fill" style="width:' + pct + ';background:' + color + '"></div></div>' +
           '<div class="ai-reason">' +
             '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);letter-spacing:1px">XAI REASON ▸</span> ' +
-            '<span style="font-size:12px;color:var(--text)">' + emp.reason + '</span>' +
+            '<span style="font-size:12px;color:var(--text)">' + reason + '</span>' +
           '</div>' +
-          (emp.flagged ? '<div class="ai-flagged-banner">⚠ ANOMALY DETECTED BY AI MODEL</div>' : '') +
+          (label === 'CRITICAL' || label === 'HIGH' ?
+            '<div class="ai-flagged-banner">⚠ ' + label + ' RISK — ANOMALY DETECTED BY AI MODEL</div>' : '') +
+          '<div style="margin-top:10px;font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);text-align:right;">' +
+            'Scored: ' + (emp.day || '') +
+          '</div>' +
+          '<button onclick="downloadAuditReport(\'' + emp.user_email + '\')" ' +
+            'style="margin-top:10px;width:100%;background:none;border:1px solid var(--green);' +
+            'color:var(--green);font-family:\'Share Tech Mono\',monospace;font-size:10px;' +
+            'letter-spacing:1px;padding:6px 0;border-radius:6px;cursor:pointer;' +
+            'transition:background 0.15s;" ' +
+            'onmouseover="this.style.background=\'rgba(15,158,110,0.12)\'" ' +
+            'onmouseout="this.style.background=\'none\'">' +
+            '<i class="fas fa-file-pdf" style="margin-right:6px;"></i>DOWNLOAD AUDIT REPORT' +
+          '</button>' +
         '</div>';
       }).join('');
     })
@@ -2392,6 +2952,111 @@ function loadAIRiskScores() {
       container.innerHTML = '<div class="empty-state" style="padding:40px;color:var(--red)">Error loading AI scores: ' + err + '</div>';
     });
 }
+
+// ── AI ALERTS ────────────────────────────────────────────────────────────────
+function loadAIAlerts() {
+  var panel = document.getElementById('ai-alerts-panel');
+  var list  = document.getElementById('ai-alerts-list');
+  panel.style.display = 'block';
+  list.innerHTML = '<div style="text-align:center;padding:20px;font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--muted);">Loading alerts...</div>';
+
+  fetch('/api/ai/alerts', { headers: { 'X-Auth-Token': SESSION_TOKEN } })
+    .then(function(r) { return r.json(); })
+    .then(function(alerts) {
+      if (!Array.isArray(alerts) || alerts.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;font-family:\'Share Tech Mono\',monospace;font-size:12px;color:var(--green);">✓ No unacknowledged alerts</div>';
+        return;
+      }
+      list.innerHTML = alerts.map(function(a) {
+        var color = a.level === 'CRITICAL' ? 'var(--red)' :
+                    a.level === 'HIGH'     ? '#ff6688'    :
+                    a.level === 'MEDIUM'   ? 'var(--yellow)' : 'var(--green)';
+        return '<div style="background:var(--surface);border:1px solid ' + color + '44;border-left:3px solid ' + color + ';border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;">' +
+          '<div style="flex:1;">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">' +
+              '<span style="font-family:\'Share Tech Mono\',monospace;font-size:11px;font-weight:700;color:' + color + ';letter-spacing:1px;">' + a.level + '</span>' +
+              '<span style="font-size:12px;font-weight:700;">' + (a.name || a.user_email) + '</span>' +
+              '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted);">' + a.user_email + '</span>' +
+              '<span style="margin-left:auto;font-family:\'Share Tech Mono\',monospace;font-size:18px;font-weight:700;color:' + color + ';">' + parseFloat(a.risk_score||0).toFixed(1) + '</span>' +
+            '</div>' +
+            '<div style="font-size:12px;color:var(--muted);">' + (a.note || '') + '</div>' +
+            '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);margin-top:4px;">' + (a.date || '') + '</div>' +
+          '</div>' +
+          '<button onclick="ackAlert(\'' + a._id + '\', this)" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:10px;flex-shrink:0;">ACK</button>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function(err) {
+      list.innerHTML = '<div style="color:var(--red);padding:10px;font-family:\'Share Tech Mono\',monospace;font-size:12px;">Error: ' + err + '</div>';
+    });
+}
+
+function ackAlert(alertId, btn) {
+  btn.textContent = '...';
+  btn.disabled = true;
+  fetch('/api/ai/alerts/' + alertId + '/ack', {
+    method: 'POST',
+    headers: { 'X-Auth-Token': SESSION_TOKEN }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success) {
+      var card = btn.closest('div[style*="border-left"]');
+      if (card) { card.style.opacity = '0.4'; card.style.transition = 'opacity 0.3s'; }
+      btn.textContent = '✓';
+      // Refresh alert badge
+      loadAIRiskScores();
+    }
+  });
+}
+
+// ── MANUAL SCAN ──────────────────────────────────────────────────────────────
+function triggerManualScan() {
+  var btn = document.getElementById('ai-scan-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Scanning...';
+
+  fetch('/api/ai/run-scan', {
+    method: 'POST',
+    headers: { 'X-Auth-Token': SESSION_TOKEN }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    btn.innerHTML = '<i class="fas fa-check"></i> Scan Started';
+    setTimeout(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-rotate-right"></i> Run Scan Now';
+      // Reload scores after 35 seconds
+      setTimeout(loadAIRiskScores, 35000);
+    }, 3000);
+  })
+  .catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rotate-right"></i> Run Scan Now';
+  });
+}
+
+// ── SOCKET.IO — Critical alert toast ─────────────────────────────────────────
+socket.on('ai_critical_alert', function(data) {
+  var msg = '🚨 CRITICAL: ' + (data.user_email || '') +
+            ' — Score ' + parseFloat(data.risk_score||0).toFixed(1) +
+            ' — ' + (data.reason || '');
+  // Show as toast using existing toast system if available
+  if (typeof showToast === 'function') {
+    showToast('AI CRITICAL ALERT', msg, 'high');
+  } else {
+    // Fallback: simple notification
+    var toastEl = document.createElement('div');
+    toastEl.className = 'toast high';
+    toastEl.innerHTML = '<div class="toast-title">⚠ AI CRITICAL ALERT</div><div>' + msg + '</div>';
+    var tc = document.getElementById('toast-container');
+    if (tc) { tc.appendChild(toastEl); setTimeout(function(){toastEl.remove();}, 8000); }
+  }
+  // Reload scores if on airisk tab
+  if (document.getElementById('tab-airisk').classList.contains('active')) {
+    loadAIRiskScores();
+  }
+});
 
 // ── SESSION EXTENSION REQUESTS ────────────────────────────────────────────────
 var pendingExtensions = {}; // keyed by email

@@ -84,8 +84,14 @@ app.register_blueprint(actions_bp)
 app.register_blueprint(feedback_bp)
 app.register_blueprint(client_bp)
 
+from routes.threat_api import threat_bp
+app.register_blueprint(threat_bp)
+from routes.xai_api import xai_bp, init_xai_bp
+app.register_blueprint(xai_bp)
+init_xai_bp()
 from models.user import db as _meeting_db
 register_meeting_sockets(socketio, _meeting_db)
+
 
 
 # --- Helpers ------------------------------------------------------------------
@@ -336,6 +342,14 @@ def request_otp():
     if not loc_allowed:
         detected = city + (" / " + region if region and region != city else "")
         loc_str  = city + ", " + country
+        _locs = user.get("allowed_locations") or []
+        approved_zones = ", ".join([z.get("city", "") if isinstance(z, dict) else str(z) for z in _locs]) or "None configured"
+        xai_loc_reason = (
+            "Your login was blocked because your current location ("
+            + detected + ") is not in your approved location list. "
+            "Your approved zones are: " + approved_zones + ". "
+            "Contact your manager to add this location, or request travel mode if you are travelling."
+        )
         log_security_event(
             email, "LOCATION_BLOCKED",
             "Login attempt from unauthorized location: " + loc_str,
@@ -353,7 +367,8 @@ def request_otp():
             "blocked": True
         })
         return jsonify({
-            "error": "Access denied. Location detected: '" + detected + "'. Not in your allowed zones. Contact your administrator."
+            "error":      "Access denied. Location detected: '" + detected + "'. Not in your allowed zones. Contact your administrator.",
+            "xai_reason": xai_loc_reason
         }), 403
 
     otp = str(random.randint(100000, 999999))
@@ -542,14 +557,33 @@ def verify_otp():
     else:
         _redirect = "/employee"
 
+    _xai_explanation = []
+    _xai_score = 0
+    _xai_level = "LOW"
+    if device_mismatch:
+        _xai_score += 40
+        _xai_explanation.append("Login from an unrecognised device. Your browser, OS, or timezone changed from your enrolled profile. This may indicate account compromise or use of a new personal device.")
+    if travel_impossible:
+        _xai_score += 50
+        _xai_explanation.append("Two logins were recorded from locations that are physically impossible to travel between in the elapsed time. This strongly suggests credential sharing or account compromise.")
+    if _xai_score >= 70:
+        _xai_level = "HIGH"
+    elif _xai_score >= 35:
+        _xai_level = "MEDIUM"
+
     return jsonify({
-        "message": "Login successful.",
-        "role": _role,
-        "name": user["name"],
-        "token": token,
-        "location": location,
+        "message":      "Login successful.",
+        "role":         _role,
+        "name":         user["name"],
+        "token":        token,
+        "location":     location,
         "location_str": loc_str,
-        "redirect": _redirect
+        "redirect":     _redirect,
+        "xai_login": {
+            "risk_score":  _xai_score,
+            "risk_level":  _xai_level,
+            "explanation": _xai_explanation
+        }
     })
 
 
@@ -2007,6 +2041,24 @@ def admin_send_file():
         scan_engine    = "admin-send",
         scan_detail    = "Sent by admin to: " + ", ".join(recipients)
     )
+    # ── DLP scan: scan against each recipient's role ─────────────────
+    # Pass recipient email (not admin) so policy engine evaluates the
+    # sensitivity against the employee role — giving BLOCKED/WARNED for
+    # HIGH/CRITICAL files instead of the admin's blanket ALLOWED.
+    try:
+        from dlp.policy_engine import scan_and_enforce
+        for recipient_email in recipients:
+            scan_and_enforce(
+                file_path         = save_path,
+                user_email        = recipient_email,
+                action_type       = "ADMIN_FILE_SEND",
+                destination       = "admin→" + recipient_email,
+                socketio_instance = socketio
+            )
+    except Exception as _dlp_err:
+        print("[DLP] scan_and_enforce error (admin send): " + str(_dlp_err))
+    # ─────────────────────────────────────────────────────────────────
+
     for email in recipients:
         emit_to_user(email, "file_uploaded", {
             "file_id":    record["_id"],
@@ -2186,9 +2238,16 @@ def employee_upload_doc():
             "blocked": True,
             "time":    datetime.utcnow().strftime("%H:%M:%S")
         })
+        xai_virus_reason = (
+            "The file \"" + file.filename + "\" was scanned by the " + engine + " engine "
+            "and identified as malicious. Detail: " + detail + ". "
+            "The file was deleted immediately and never stored on the server. "
+            "This upload has been logged as a HIGH-risk security event."
+        )
         return jsonify({
-            "error":  "File rejected - virus/malware detected.",
-            "scan":   scan_result
+            "error":      "File rejected - virus/malware detected.",
+            "scan":       scan_result,
+            "xai_reason": xai_virus_reason
         }), 422
 
     final_name = uuid.uuid4().hex + "." + ext
@@ -2634,8 +2693,15 @@ def mail_send():
         log_activity(sender_email, 'EMAIL_BLOCKED',
                      'Sensitive keywords: ' + ", ".join(found_kw) + ' | To: ' + ", ".join(to_list),
                      '-', '-', 'HIGH')
+        xai_email_reason = (
+            "Your email was blocked by the DLP engine because the message body contained "
+            "sensitive keywords: " + ", ".join(found_kw) + ". "
+            "Employees are not permitted to send messages containing passwords, card numbers, "
+            "salary data, or other confidential terms via internal email."
+        )
         return jsonify({'success': False, 'blocked': True,
-                        'error': 'Message blocked - sensitive content detected: ' + ", ".join(found_kw)}), 403
+                        'error': 'Message blocked - sensitive content detected: ' + ", ".join(found_kw),
+                        'xai_reason': xai_email_reason}), 403
 
     if found_kw and sender_role == 'manager':
         log_security_event(sender_email, 'MANAGER_SENSITIVE_EMAIL',
@@ -2946,6 +3012,29 @@ def upload_to_drive_route():
                                     'message': fname + ': ' + str(round(size_mb, 1)) + ' MB exceeds ' + str(limits["max_upload_mb"]) + ' MB'})
                 requires_approval = True
 
+            # ── Module 3 DLP scan ──────────────────────────────────────────────
+            try:
+                from dlp.policy_engine import scan_and_enforce
+                dlp_result = scan_and_enforce(
+                    file_path         = temp,
+                    user_email        = email,
+                    action_type       = "UPLOAD",
+                    destination       = folder,
+                    socketio_instance = socketio
+                )
+                if dlp_result and dlp_result.get("action") == "BLOCKED":
+                    for temp2, _ in temp_paths:
+                        try: os.remove(temp2)
+                        except Exception: pass
+                    return jsonify({
+                        'success': False,
+                        'blocked': True,
+                        'reason':  dlp_result.get("reason", "DLP policy blocked this upload.")
+                    }), 403
+            except Exception as _dlp_err:
+                print(f"[DLP] scan_and_enforce error (upload): {_dlp_err}")
+            # ──────────────────────────────────────────────────────────────────
+
             alerts, needs_ap = run_dlp_checks(temp, fname)
             all_alerts.extend(alerts)
             if needs_ap:
@@ -2972,12 +3061,28 @@ def upload_to_drive_route():
                 'alerts':     all_alerts,
                 'timestamp':  datetime.now().isoformat(),
             })
+            _xai_summary = '; '.join([a.get('message','') for a in all_alerts]) or 'DLP policy violation detected.'
+            _xai_score   = 75 if any(a.get('severity') == 'CRITICAL' for a in all_alerts) else \
+                           60 if any(a.get('severity') == 'HIGH'     for a in all_alerts) else 40
+            _xai_level   = 'CRITICAL' if _xai_score >= 75 else 'HIGH' if _xai_score >= 60 else 'MEDIUM'
+            _xai_explanation = [
+                "This upload was flagged by the DLP policy engine and requires manager approval before it can proceed.",
+                "Reason(s) detected: " + _xai_summary,
+                "Risk level assigned: " + _xai_level + " (score " + str(_xai_score) + "/100). "
+                "A manager must review and approve or deny this upload within 48 hours."
+            ]
             return jsonify({
                 'success':           False,
                 'requires_approval': True,
                 'upload_id':         upload_id,
                 'alerts':            all_alerts,
-                'message':           'Upload requires manager approval due to DLP violations'
+                'message':           'Upload requires manager approval due to DLP violations',
+                'xai': {
+                    'risk_score':  _xai_score,
+                    'risk_level':  _xai_level,
+                    'summary':     _xai_summary,
+                    'explanation': _xai_explanation
+                }
             }), 200
 
         uploaded_names = [t[1] for t in temp_paths] + [v.get('name', '') for v in vfs_files]
@@ -3029,6 +3134,6 @@ if __name__ == "__main__":
         sys.exit(1)
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
+    from ml.scheduler import start_scheduler
+    start_scheduler(socketio_instance=socketio)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
-    
-    

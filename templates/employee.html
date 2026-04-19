@@ -431,6 +431,7 @@ select.fc-t{cursor:pointer;}
     </div>
   </div>
   <div class="topbar-right">
+    <div id="xai-login-badge" style="display:flex;align-items:center;"></div>
     <div class="topbar-timer-badge">
       <i class="fas fa-clock"></i>
       <span id="tdisp">5:00</span>
@@ -482,7 +483,7 @@ select.fc-t{cursor:pointer;}
 
   <div class="slabel-dlp">Communication</div>
   <div class="nav-item-dlp" onclick="showPanel('email')" data-p="email"><i class="fas fa-envelope"></i> Email Composer</div>
-  <div class="nav-item-dlp" onclick="showPanel('requests')" data-p="requests"><i class="fas fa-clipboard-list"></i> Access Requests</div>
+  <div class="nav-item-dlp" onclick="showPanel('requests')" data-p="requests"><i class="fas fa-clipboard-list"></i> Forward Requests</div>
 
   <div class="slabel-dlp">Travel</div>
   <div class="nav-item-dlp" onclick="showPanel('travel')" data-p="travel"><i class="fas fa-plane"></i> Travel Request</div>
@@ -534,7 +535,7 @@ select.fc-t{cursor:pointer;}
     </div>
     <div id="view-body" style="flex:1;overflow-y:auto;min-height:400px;user-select:none;" oncontextmenu="return false"></div>
     <div class="modal-ftr" id="view-modal-ftr">
-      <button class="btn btn-sm btn-b" onclick="reqAccess(currentFid,currentFname,'download')">⬇ REQUEST DOWNLOAD</button>
+      <button class="btn btn-sm btn-b" onclick="openSaveTo(currentFid,currentFname)">⬇ DOWNLOAD</button>
       <button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="reqFwd(currentFid,currentFname)">📨 FWD REQUEST</button>
       <button class="btn btn-sm btn-r" onclick="closeView()" style="margin-left:auto;">CLOSE</button>
     </div>
@@ -820,7 +821,7 @@ select.fc-t{cursor:pointer;}
 
   <!-- REQUESTS -->
   <div class="section-dlp" id="panel-requests">
-    <div class="sec-title">My Access Requests</div>
+    <div class="sec-title">My Forward Requests</div>
     <div class="card" style="padding:0;overflow:hidden;">
       <table><thead><tr><th>File</th><th>Type</th><th>Forward To</th><th>Status</th><th>Requested</th><th>Resolved</th></tr></thead>
       <tbody id="req-body"><tr><td colspan="6" class="empty">No requests yet.</td></tr></tbody></table>
@@ -1723,6 +1724,9 @@ async function fmUploadOne(file) {
     } else {
       scanRes.style.color = "var(--red)";
       scanRes.textContent = "✗ " + (data.scan && !data.scan.clean ? "THREAT DETECTED — " + file.name + " rejected" : (data.error || "Upload failed"));
+      if (data.xai_reason && typeof showXAIPopup === 'function') {
+        showXAIPopup([data.xai_reason], 'FILE BLOCKED — VIRUS / MALWARE DETECTED');
+      }
     }
   } catch(e) {
     scanRes.style.color = "var(--red)";
@@ -2026,15 +2030,7 @@ function fIcon(m){if(!m)return"📄";if(m.includes("pdf"))return"📕";if(m.incl
 function fIconByName(n){var e=n.split(".").pop().toLowerCase();if(e==="pdf")return"📕";if(e==="docx"||e==="doc")return"📘";if(e==="xlsx"||e==="xls")return"📗";if(e==="pptx"||e==="ppt")return"📙";if(["png","jpg","jpeg","gif","webp"].includes(e))return"🖼";if(["txt","csv","json","xml"].includes(e))return"📃";return"📄";}
 
 function _dlBtn(fid, fname, dlStatus){
-  if(dlStatus==="approved"){
-    return "<button class='btn btn-sm btn-b' onclick='openSaveTo(\""+fid+"\",\""+fname+"\")' title='Approved! Click to save to your File Manager'>⬇ SAVE TO FM</button>";
-  } else if(dlStatus==="pending"){
-    return "<button class='btn btn-sm' disabled style='opacity:0.5;cursor:not-allowed;border-color:var(--yellow);color:var(--yellow)' title='Awaiting manager approval'>⏳ PENDING…</button>";
-  } else if(dlStatus==="rejected"){
-    return "<button class='btn btn-sm btn-b' onclick='reqAccess(\""+fid+"\",\""+fname+"\",\"download\")' title='Rejected — click to re-request' style='border-color:var(--red);color:var(--red)'>⬇ RE-REQUEST</button>";
-  } else {
-    return "<button class='btn btn-sm btn-b' onclick='reqAccess(\""+fid+"\",\""+fname+"\",\"download\")'>⬇ REQUEST DL</button>";
-  }
+  return "<button class='btn btn-sm btn-b' onclick='openSaveTo(\""+fid+"\",\""+fname+"\")' title='Download file'>⬇ DOWNLOAD</button>";
 }
 
 function _fwdBtn(fid, fname, fwdStatus){
@@ -2128,10 +2124,7 @@ async function fmRenderShared(filterText) {
 }
 
 function _shDlBtn(fid, fname, s) {
-  if (s==="approved") return "<button class='btn btn-sm btn-b' style='font-size:10px;padding:4px 8px;' onclick='openSaveTo(\""+fid+"\",\""+fname+"\")' title='Save to FM'>&#11015; SAVE</button>";
-  if (s==="pending")  return "<button class='btn btn-sm' disabled style='opacity:0.5;font-size:10px;padding:4px 8px;border-color:var(--yellow);color:var(--yellow)'>&#9203; DL</button>";
-  if (s==="rejected") return "<button class='btn btn-sm btn-b' style='font-size:10px;padding:4px 8px;border-color:var(--red);color:var(--red)' onclick='reqAccess(\""+fid+"\",\""+fname+"\",\"download\");fmInvalidateSharedCache()'>&#8634; RE-REQ</button>";
-  return "<button class='btn btn-sm btn-b' style='font-size:10px;padding:4px 8px;' onclick='reqAccess(\""+fid+"\",\""+fname+"\",\"download\");fmInvalidateSharedCache()'>&#11015; REQ DL</button>";
+  return "<button class='btn btn-sm btn-b' style='font-size:10px;padding:4px 8px;' onclick='openSaveTo(\""+fid+"\",\""+fname+"\")' title='Download file'>&#11015; DOWNLOAD</button>";
 }
 
 function _shFwdBtn(fid, fname, s) {
@@ -2175,7 +2168,7 @@ function fmShowFileMenu(e, fid, fname, mime, opts) {
   } else if(o.dlStatus==="rejected") {
     items.push({icon:"↻", label:"Re-request Download", action:"fmMenuReReqDl()", color:"var(--red)"});
   } else {
-    items.push({icon:"⬇", label:"Request Download", action:"fmMenuReqDl()"});
+    items.push({icon:"⬇", label:"Download", action:"fmMenuReqDl()"});
   }
 
   items.push({type:"sep"});
@@ -2220,7 +2213,7 @@ document.addEventListener("keydown", function(e){ if(e.key==="Escape") fmCloseFi
 
 function fmMenuView()    { fmCloseFileMenu(); viewFile(_fmMenuCtx.fid, _fmMenuCtx.fname, _fmMenuCtx.mime); }
 function fmMenuDownload(){ fmCloseFileMenu(); openSaveTo(_fmMenuCtx.fid, _fmMenuCtx.fname); }
-function fmMenuReqDl()   { fmCloseFileMenu(); reqAccess(_fmMenuCtx.fid, _fmMenuCtx.fname, "download"); fmInvalidateSharedCache(); setTimeout(function(){ if(_fmCurrentSection==="server") fmLoadServerFiles(); else if(_fmCurrentSection==="recent") fmLoadRecentFiles(); },800); }
+function fmMenuReqDl()   { fmCloseFileMenu(); openSaveTo(_fmMenuCtx.fid, _fmMenuCtx.fname); }
 function fmMenuReReqDl() { fmMenuReqDl(); }
 function fmMenuReqFwd()  { fmCloseFileMenu(); reqFwd(_fmMenuCtx.fid, _fmMenuCtx.fname); }
 function fmMenuForward() { fmCloseFileMenu(); doForwardSend(_fmMenuCtx.fid, _fmMenuCtx.fname); }
@@ -3469,6 +3462,9 @@ async function emSendReply() {
       setTimeout(function(){ emOpenThread(emState.currentThread); }, 400);
     } else if (data.blocked) {
       if (msgEl) { msgEl.textContent = '⚠ Blocked: ' + (data.error||'DLP'); msgEl.style.color = 'var(--yellow)'; }
+      if (data.xai_reason && typeof showXAIPopup === 'function') {
+        showXAIPopup([data.xai_reason], 'EMAIL BLOCKED BY DLP POLICY');
+      }
     } else {
       if (msgEl) { msgEl.textContent = '✗ ' + (data.error||'Failed'); msgEl.style.color = 'var(--red)'; }
     }
@@ -3852,6 +3848,9 @@ async function emSend() {
       emLoadView();
     } else if (data.blocked) {
       emShowMsg('⚠ Blocked: ' + (data.error || 'DLP violation'), 'warn');
+      if (data.xai_reason && typeof showXAIPopup === 'function') {
+        showXAIPopup([data.xai_reason], 'EMAIL BLOCKED BY DLP POLICY');
+      }
     } else {
       emShowMsg('✗ ' + (data.error || 'Failed'), 'err');
     }
@@ -4123,6 +4122,13 @@ async function clUpload(){
     if(!r){ clMsg('Network error','err'); pw.style.display='none'; btn.disabled=false; return; }
     var data=await r.json();
     bar.style.width='100%'; pct.textContent='100%';
+    /* XAI: show popup for any flagged upload */
+    if (data.xai && typeof showXAIPopup === 'function') {
+      showXAIPopup(
+        data.xai.explanation || [data.xai.summary || 'Upload flagged by AI.'],
+        'FILE UPLOAD FLAGGED — ' + (data.xai.risk_level||'') + ' (' + (data.xai.risk_score||0) + '/100)'
+      );
+    }
     if(data.success){
       st.textContent='Complete!'; clMsg('Uploaded '+clFiles.length+' file(s) to '+folder,'ok');
       clFiles=[];
@@ -4441,6 +4447,120 @@ socket.on('file_approval', function(data) {
 // Init notifications
 notifLoadFromServer();
 setInterval(notifLoadFromServer, 30000);
+
+/* ══════════════════════════════════════════════════════════════
+   XAI POPUP ENGINE
+   shared by all employee features
+   Call: showXAIPopup(sentences, title)
+   sentences = string[]  from SHAP / xai_reason
+   title     = header text
+══════════════════════════════════════════════════════════════ */
+function showXAIPopup(sentences, title) {
+  var old = document.getElementById('xai-popup-overlay');
+  if (old) old.remove();
+
+  var list = Array.isArray(sentences) ? sentences : [sentences];
+
+  var lvl = 'HIGH';
+  if (title && title.indexOf('MEDIUM') !== -1) lvl = 'MEDIUM';
+  if (title && title.indexOf('LOW')    !== -1) lvl = 'LOW';
+  if (title && (title.indexOf('BLOCKED') !== -1 || title.indexOf('CRITICAL') !== -1)) lvl = 'HIGH';
+
+  var hc  = {HIGH:'#e0253a', MEDIUM:'#e08a00', LOW:'#0f9e6e'}[lvl] || '#1a6fef';
+  var ic  = {HIGH:'#fff3f3', MEDIUM:'#fffbf0', LOW:'#f0fdf7'}[lvl] || '#f0f4ff';
+  var ico = {HIGH:'⚠',       MEDIUM:'⚠',       LOW:'ℹ'}[lvl]       || '⚠';
+
+  var sm = title && title.match(/\((\d+)\/100\)/);
+  var scoreHtml = '';
+  if (sm) {
+    var sc = parseInt(sm[1]);
+    scoreHtml =
+      '<div style="margin:0 20px 14px;padding:10px 14px;background:#f8f9ff;border-radius:8px;border:1px solid #dde3f5;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:#6b7fa8;letter-spacing:2px;">AI RISK SCORE</span>' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:16px;font-weight:700;color:' + hc + ';">' + sc + '/100</span>' +
+        '</div>' +
+        '<div style="background:#e8eaf6;border-radius:3px;height:6px;overflow:hidden;">' +
+          '<div style="width:' + sc + '%;height:100%;background:' + hc + ';border-radius:3px;"></div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var ov = document.createElement('div');
+  ov.id = 'xai-popup-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,30,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:0 24px 72px rgba(26,111,239,0.25);">' +
+      '<div style="background:' + hc + ';border-radius:14px 14px 0 0;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<div style="width:32px;height:32px;background:rgba(255,255,255,0.22);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;">' + ico + '</div>' +
+          '<div>' +
+            '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:rgba(255,255,255,0.75);letter-spacing:2px;margin-bottom:2px;">AI EXPLANATION — SHAP MODEL</div>' +
+            '<div style="font-family:\'Share Tech Mono\',monospace;font-size:11px;color:#fff;font-weight:700;letter-spacing:1px;">' + (title || 'WHY THIS WAS FLAGGED') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<button onclick="document.getElementById(\'xai-popup-overlay\').remove()" ' +
+          'style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;">✕</button>' +
+      '</div>' +
+      scoreHtml +
+      '<div style="padding:' + (scoreHtml ? '0' : '18px') + ' 20px 18px;">' +
+        '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#6b7fa8;letter-spacing:2px;margin-bottom:10px;">REASON' + (list.length > 1 ? 'S' : '') + ' FOR THIS DECISION</div>' +
+        '<ul style="list-style:none;padding:0;margin:0;">' +
+          list.map(function(s) {
+            return '<li style="display:flex;align-items:flex-start;gap:9px;padding:11px 13px;border-radius:8px;' +
+              'background:' + ic + ';border-left:3px solid ' + hc + ';margin-bottom:8px;' +
+              'font-family:Rajdhani,sans-serif;font-size:14px;color:#1a2340;line-height:1.6;">' +
+              '<span style="color:' + hc + ';flex-shrink:0;margin-top:1px;font-size:13px;">' + ico + '</span>' +
+              '<span>' + s + '</span></li>';
+          }).join('') +
+        '</ul>' +
+        '<div style="margin-top:12px;padding:9px 12px;background:#eef2ff;border-radius:7px;display:flex;align-items:center;gap:7px;">' +
+          '<svg width="13" height="13" fill="none" stroke="#6b7fa8" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+          '<span style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:#6b7fa8;letter-spacing:0.5px;">Powered by SHAP — real model reasoning, not manual rules.</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+}
+
+/* ── Read login XAI from sessionStorage on page load ── */
+(function () {
+  try {
+    var stored = sessionStorage.getItem('xai_login');
+    if (!stored) return;
+    var xd = JSON.parse(stored);
+    sessionStorage.removeItem('xai_login');
+    if (!xd || !xd.risk_score) return;
+
+    var badge = document.getElementById('xai-login-badge');
+    if (badge) {
+      var lvlColors = { LOW: '#0f9e6e', MEDIUM: '#e08a00', HIGH: '#e0253a', CRITICAL: '#b00000' };
+      var lc = lvlColors[xd.risk_level] || '#1a6fef';
+      badge.innerHTML =
+        '<button onclick="showXAIPopup(' + JSON.stringify(xd.explanation || []).replace(/'/g, "&#39;") + ',' +
+          '\'LOGIN RISK: ' + (xd.risk_level || '') + ' (' + (xd.risk_score || 0) + '/100)\')" ' +
+        'style="background:none;border:1px solid ' + lc + ';color:' + lc + ';padding:3px 10px;border-radius:5px;' +
+        'cursor:pointer;font-family:\'Share Tech Mono\',monospace;font-size:9px;letter-spacing:1px;' +
+        'display:flex;align-items:center;gap:5px;white-space:nowrap;">' +
+        '<svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' +
+        '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>' +
+        ' LOGIN RISK: ' + (xd.risk_level || 'LOW') + ' (' + (xd.risk_score || 0) + ')</button>';
+    }
+
+    if (xd.risk_score >= 35 && xd.explanation && xd.explanation.length) {
+      setTimeout(function () {
+        showXAIPopup(
+          xd.explanation,
+          'LOGIN RISK: ' + (xd.risk_level || '') + ' (' + (xd.risk_score || 0) + '/100)'
+        );
+      }, 800);
+    }
+  } catch (e) {}
+})();
+
 </script>
 
 <!-- ═══ LIVE CAMERA OVERLAY ═══════════════════════════════════════ -->
@@ -4743,4 +4863,3 @@ showPanel = function(name) {
 
 </body>
 </html>
-
