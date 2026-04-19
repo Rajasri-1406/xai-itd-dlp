@@ -3274,7 +3274,158 @@ def employee_notifications():
     return jsonify([])
 
 
+@app.route("/api/manager/notifications")
+@login_required(roles=["manager", "admin"])
+def manager_notifications():
+    """Return recent security events and DLP alerts as notifications"""
+    try:
+        from models.user import db
+        email = request.auth_email
+        notifs = []
+
+        # Recent security events
+        events = list(db["security_events"].find(
+            {},
+            {"_id": 1, "email": 1, "action": 1, "detail": 1,
+             "timestamp": 1, "blocked": 1, "risk_level": 1}
+        ).sort("timestamp", -1).limit(20))
+
+        for e in events:
+            notifs.append({
+                "id":      str(e["_id"]),
+                "type":    e.get("action", "EVENT"),
+                "message": e.get("detail", "Security event detected"),
+                "email":   e.get("email", ""),
+                "risk":    e.get("risk_level", "LOW"),
+                "blocked": e.get("blocked", False),
+                "time":    e["timestamp"].strftime("%H:%M") if hasattr(e.get("timestamp"), "strftime") else ""
+            })
+
+        # Recent DLP events
+        dlp_events = list(db["dlp_events"].find(
+            {"resolved": {"$ne": True}},
+            {"_id": 1, "user_email": 1, "filename": 1,
+             "sensitivity_level": 1, "action_taken": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(10))
+
+        for d in dlp_events:
+            notifs.append({
+                "id":      str(d["_id"]),
+                "type":    "DLP_VIOLATION",
+                "message": "DLP: " + d.get("filename", "") + " — " + d.get("action_taken", ""),
+                "email":   d.get("user_email", ""),
+                "risk":    d.get("sensitivity_level", "LOW"),
+                "blocked": d.get("action_taken") == "BLOCKED",
+                "time":    d["created_at"].strftime("%H:%M") if hasattr(d.get("created_at"), "strftime") else ""
+            })
+
+        notifs.sort(key=lambda x: x.get("time", ""), reverse=True)
+        return jsonify(notifs[:30])
+    except Exception as e:
+        import traceback
+        print("[NOTIFICATIONS ERROR] " + traceback.format_exc())
+        return jsonify([])
+
+
+@app.route("/api/manager/publish-file", methods=["POST"])
+@login_required(roles=["manager", "admin"])
+def publish_file():
+    """Make a file public — visible to all employees"""
+    try:
+        data    = request.json or {}
+        file_id = data.get("file_id", "")
+        if not file_id:
+            return jsonify({"error": "file_id required"}), 400
+
+        from models.files import shared_files_col
+        from bson import ObjectId
+        result = shared_files_col.update_one(
+            {"_id": ObjectId(file_id), "is_active": True},
+            {"$set": {"visibility": "public", "allowed_emails": []}}
+        )
+        if result.matched_count == 0:
+            return jsonify({"error": "File not found"}), 404
+
+        log_activity(request.auth_email, "FILE_PUBLISHED",
+                     "Published file: " + file_id,
+                     "Manager Dashboard", "internal", "LOW")
+        return jsonify({"ok": True, "message": "File published to all employees."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # --- Run ----------------------------------------------------------------------
+
+
+
+# ── Missing manager routes called by manager.html ──────────────────────────
+
+@app.route("/api/manager/notifications")
+@login_required(roles=["manager", "admin"])
+def manager_notifications():
+    """Manager notifications — returns unresolved DLP events + pending approvals"""
+    try:
+        from routes.xai_api import dlp_col
+        from models.files import approval_col
+        dlp_count      = dlp_col.count_documents({"resolved": {"$ne": True}})
+        approval_count = approval_col.count_documents({"status": "pending"})
+        return jsonify({
+            "dlp_unresolved":      dlp_count,
+            "approvals_pending":   approval_count,
+            "total":               dlp_count + approval_count
+        })
+    except Exception as e:
+        return jsonify({"dlp_unresolved": 0, "approvals_pending": 0, "total": 0})
+
+
+@app.route("/api/manager/publish-file", methods=["POST"])
+@login_required(roles=["manager", "admin"])
+def manager_publish_file():
+    """Publish a file — set visibility to public or private with recipients"""
+    try:
+        from models.files import shared_files_col
+        from bson import ObjectId
+        data        = request.json or {}
+        file_id     = data.get("file_id", "")
+        visibility  = data.get("visibility", "public")
+        recipients  = data.get("recipients", [])
+        shared_files_col.update_one(
+            {"_id": ObjectId(file_id)},
+            {"$set": {
+                "visibility":     visibility,
+                "allowed_emails": recipients if visibility == "private" else []
+            }}
+        )
+        return jsonify({"message": "File published successfully."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/manager/approve", methods=["POST"])
+@login_required(roles=["manager", "admin"])
+def manager_approve_request():
+    """Approve or reject a file access request"""
+    try:
+        from models.files import approval_col
+        from bson import ObjectId
+        data       = request.json or {}
+        request_id = data.get("request_id", "")
+        action     = data.get("action", "")  # "approved" or "rejected"
+        if action not in ("approved", "rejected"):
+            return jsonify({"error": "Invalid action."}), 400
+        approval_col.update_one(
+            {"_id": ObjectId(request_id)},
+            {"$set": {
+                "status":      action,
+                "resolved_at": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+                "resolved_by": request.auth_email
+            }}
+        )
+        return jsonify({"message": "Request " + action + " successfully."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ── end missing manager routes ──────────────────────────────────────────────
 
 # Start scheduler outside __main__ so gunicorn (Render) also runs it
 try:
