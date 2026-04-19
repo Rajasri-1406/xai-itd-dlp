@@ -2501,7 +2501,8 @@ def ai_risk_scores_alias():
                     "risk_score": risk_score, "risk_level": risk_level,
                     "reason": ", ".join(reasons), "flagged": risk_score >= 70
                 })
-            except Exception:
+            except Exception as _e:
+                print("[AI RISK] feature error for " + email + ": " + str(_e))
                 results.append({
                     "email": email, "name": name,
                     "risk_score": 0, "risk_level": "LOW",
@@ -2509,16 +2510,21 @@ def ai_risk_scores_alias():
                 })
         results.sort(key=lambda x: x["risk_score"], reverse=True)
         return jsonify(results)
-    return ai_risk_scores()
+    try:
+        return ai_risk_scores()
+    except Exception as e:
+        import traceback
+        print("[AI RISK-SCORES ERROR] " + traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/ai/summary")
 @login_required(roles=["manager", "admin"])
 def ai_summary():
     """Summary stats for AI Risk Engine panel header"""
-    employees = get_all_employees()
-    high = medium = low = flagged = 0
     try:
+        employees = get_all_employees()
+        high = medium = low = flagged = 0
         for emp in employees:
             email = emp.get("email", "")
             try:
@@ -2537,15 +2543,17 @@ def ai_summary():
                 if risk_score >= 70:   flagged += 1
             except Exception:
                 low += 1
-    except Exception:
-        pass
-    return jsonify({
-        "total":   len(employees),
-        "high":    high,
-        "medium":  medium,
-        "low":     low,
-        "flagged": flagged
-    })
+        return jsonify({
+            "total":   len(employees),
+            "high":    high,
+            "medium":  medium,
+            "low":     low,
+            "flagged": flagged
+        })
+    except Exception as e:
+        import traceback
+        print("[AI SUMMARY ERROR] " + traceback.format_exc())
+        return jsonify({"error": str(e), "total": 0, "high": 0, "medium": 0, "low": 0, "flagged": 0}), 500
 
 
 @app.route("/api/ai/alerts")
