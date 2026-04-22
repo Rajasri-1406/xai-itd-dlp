@@ -1979,7 +1979,7 @@ def admin_reject_manager_travel():
 # SESSION TIMEOUT
 # ===============================================================
 
-SESSION_TIMEOUT_SECONDS = 300
+SESSION_TIMEOUT_SECONDS = 1800
 
 @app.route("/api/auth/heartbeat", methods=["POST"])
 @login_required(roles=["employee", "manager", "admin"])
@@ -2017,7 +2017,7 @@ def manager_approve_extend():
         "status":  "approved",
         "email":   email,
         "message": "Your session has been extended by your manager.",
-        "extend_seconds": 300
+        "extend_seconds": 1800
     })
     log_activity(request.auth_email, "SESSION_EXTEND_APPROVED",
         "Approved session extension for " + email,

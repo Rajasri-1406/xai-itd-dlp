@@ -492,7 +492,8 @@ select.fc-t{cursor:pointer;}
   <div class="nav-item-dlp" onclick="showPanel('auditlogs')" data-p="auditlogs"><i class="fas fa-list-check"></i> Audit Logs</div>
 
   <div class="slabel-dlp">Clients</div>
-
+  <div class="nav-item-dlp" onclick="window.location.href='/meetings?token='+SESSION_TOKEN+'&page=client-requests'" data-p="client-requests"><i class="fas fa-calendar-plus"></i> Add Meeting</div>
+  <div class="nav-item-dlp" onclick="window.location.href='/meetings?token='+SESSION_TOKEN+'&page=my-requests'" data-p="my-requests"><i class="fas fa-list-check"></i> My Requests</div>
 
   <div class="slabel-dlp">Meetings</div>
   <div class="nav-item-dlp" onclick="openMeetingHub()" data-p="meetings"><i class="fas fa-video"></i> Meeting Hub</div>
@@ -1122,7 +1123,7 @@ socket.on("travel_mode_resolved", function(d) {
 // Only EXTEND (approved by manager) resets it to a fresh 5 minutes.
 // Tab-switch: time away is added back so countdown pauses while tab is hidden.
 // ═══════════════════════════════════════════
-var TSECS = 300;
+var TSECS = 1800;
 var stimer = null;
 var _tabHiddenAt = null;
 

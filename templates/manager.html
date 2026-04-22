@@ -458,7 +458,7 @@
 
 
   <div class="slabel-dlp">Meetings</div>
-  <div class="nav-item-dlp" onclick="showPanel('meetinghub')" data-p="meetinghub">
+  <div class="nav-item-dlp" onclick="window.location.href='/meetings?token='+SESSION_TOKEN" data-p="meetinghub" style="cursor:pointer;">
     <i class="fas fa-video"></i> Meeting Hub
     <span class="nav-badge-dlp" id="cm-pending-badge" style="display:none">0</span>
   </div>
@@ -1103,62 +1103,6 @@
     </div>
   </div>
 
-
-  <!-- MEETING HUB PANEL -->
-  <div class="section-dlp" id="tab-meetinghub">
-    <div class="ph-t" style="margin-bottom:0;">
-      <div class="ph-title-t"><i class="fas fa-video"></i> Meeting Hub</div>
-      <button class="btn btn-ghost-t btn-sm-t" onclick="window.open('/meetings?token='+SESSION_TOKEN,'_blank')">
-        <i class="fas fa-arrow-up-right-from-square"></i> Open Full Hub
-      </button>
-    </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;border-bottom:1px solid var(--border);margin:16px 0 20px;">
-      <button id="mht-tab-approvals" onclick="mhSwitchTab('approvals')"
-        style="padding:9px 20px;background:none;border:none;border-bottom:2px solid var(--blue);color:var(--blue);font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px;transition:all .2s;">
-        <i class="fas fa-calendar-check" style="margin-right:6px;"></i>CLIENT APPROVALS
-      </button>
-      <button id="mht-tab-logs" onclick="mhSwitchTab('logs')"
-        style="padding:9px 20px;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px;transition:all .2s;">
-        <i class="fas fa-list-check" style="margin-right:6px;"></i>MEETING LOGS
-      </button>
-    </div>
-
-    <!-- Approvals pane -->
-    <div id="mht-pane-approvals">
-      <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="btn btn-ghost-t btn-sm-t" onclick="loadClientMeetingRequests('pending')">Pending</button>
-        <button class="btn btn-ghost-t btn-sm-t" onclick="loadClientMeetingRequests('approved')">Approved</button>
-        <button class="btn btn-ghost-t btn-sm-t" onclick="loadClientMeetingRequests('rejected')">Rejected</button>
-        <button class="btn btn-ghost-t btn-sm-t" onclick="loadClientMeetingRequests('all')">All</button>
-      </div>
-      <div id="mgr-cm-requests-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
-
-    <!-- Logs pane -->
-    <div id="mht-pane-logs" style="display:none;">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-        <button class="btn btn-ghost-t btn-sm-t" onclick="loadMgrMeetingLogs()"><i class="fas fa-rotate"></i> Refresh</button>
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;min-width:600px;">
-          <thead>
-            <tr style="border-bottom:1px solid var(--border);">
-              <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">EMPLOYEE</th>
-              <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">CLIENT</th>
-              <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">DATE &amp; TIME</th>
-              <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">AGENDA</th>
-              <th style="padding:11px 14px;text-align:left;font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:1px;">APPROVED BY</th>
-            </tr>
-          </thead>
-          <tbody id="mgr-meeting-logs-body">
-            <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
   <!-- DLP VIOLATIONS PANEL -->
   <div class="section-dlp" id="tab-dlp">
@@ -4779,159 +4723,8 @@ function _camTick(){
 })();
 
 // ── MEETING HUB ──────────────────────────────────────────────
-function openMeetingHub() { showPanel('meetinghub'); }
+function openMeetingHub() { window.location.href = '/meetings?token=' + SESSION_TOKEN; }
 
-function mhSwitchTab(tab) {
-  var isApprovals = tab === 'approvals';
-  document.getElementById('mht-pane-approvals').style.display = isApprovals ? 'block' : 'none';
-  document.getElementById('mht-pane-logs').style.display      = isApprovals ? 'none'  : 'block';
-  var ta = document.getElementById('mht-tab-approvals');
-  var tl = document.getElementById('mht-tab-logs');
-  ta.style.borderBottomColor = isApprovals ? 'var(--blue)' : 'transparent';
-  ta.style.color             = isApprovals ? 'var(--blue)' : 'var(--muted)';
-  tl.style.borderBottomColor = isApprovals ? 'transparent' : 'var(--blue)';
-  tl.style.color             = isApprovals ? 'var(--muted)' : 'var(--blue)';
-  if (!isApprovals) loadMgrMeetingLogs();
-}
-
-function _fmtDate(raw) {
-  if (!raw) return '—';
-  var d = new Date(raw);
-  if (isNaN(d.getTime())) return raw;
-  return d.toLocaleString('en-GB', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
-}
-
-// ── CLIENT MEETING APPROVALS ─────────────────────────────────
-async function loadClientMeetingRequests(status) {
-  status = status || 'pending';
-  var res  = await fetch('/api/manager/client-meeting-requests?status=' + status, {headers:{'X-Auth-Token':SESSION_TOKEN}});
-  var reqs = await res.json();
-  var el   = document.getElementById('mgr-cm-requests-list');
-
-  if (status === 'pending') {
-    var badge = document.getElementById('cm-pending-badge');
-    if (Array.isArray(reqs) && reqs.length) { badge.style.display='inline-block'; badge.textContent=reqs.length; }
-    else { badge.style.display='none'; }
-  }
-
-  if (!Array.isArray(reqs) || !reqs.length) {
-    el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);font-size:12px;font-family:var(--mono);background:var(--surface);border:1px solid var(--border);border-radius:10px;">No ' + status + ' requests.</div>';
-    return;
-  }
-
-  el.innerHTML = reqs.map(function(r) {
-    var statusColor = {pending:'var(--yellow)', approved:'var(--green)', rejected:'var(--red)'}[r.status] || 'var(--muted)';
-    var btns = r.status === 'pending'
-      ? '<div style="display:flex;gap:8px;flex-shrink:0;">' +
-          '<button onclick="approveCM(\'' + r._id + '\')" style="padding:7px 14px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.4);color:var(--green);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;">✓ APPROVE</button>' +
-          '<button onclick="rejectCM(\'' + r._id + '\')" style="padding:7px 14px;background:rgba(255,51,102,.15);border:1px solid rgba(255,51,102,.4);color:var(--red);border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;">✗ REJECT</button>' +
-        '</div>'
-      : '<span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono);background:' + statusColor + '22;color:' + statusColor + ';border:1px solid ' + statusColor + '44;">' + r.status.toUpperCase() + '</span>';
-
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">' +
-          '<div style="font-size:13px;font-weight:700;">' + r.employee_name + '</div>' +
-          '<span style="font-size:10px;color:var(--muted);font-family:var(--mono);">→</span>' +
-          '<div style="font-size:13px;font-weight:700;color:var(--blue);">' + r.client_name + ' <span style="color:var(--muted);font-weight:400;">(' + (r.client_company||'') + ')</span></div>' +
-        '</div>' +
-        '<div style="font-size:11px;color:var(--muted);font-family:var(--mono);display:flex;gap:16px;flex-wrap:wrap;">' +
-          '<span><i class="fas fa-calendar-days" style="margin-right:4px;"></i>' + _fmtDate(r.scheduled_time) + '</span>' +
-          '<span><i class="fas fa-clock" style="margin-right:4px;"></i>' + (r.duration_minutes||60) + ' min</span>' +
-        '</div>' +
-        '<div style="margin-top:6px;font-size:12px;color:var(--text);">📋 ' + (r.agenda||'—') + '</div>' +
-        (r.approved_by_name ? '<div style="margin-top:4px;font-size:11px;color:var(--green);">✓ Approved by: ' + r.approved_by_name + '</div>' : '') +
-        (r.reject_reason ? '<div style="margin-top:4px;font-size:11px;color:var(--red);">✗ Reason: ' + r.reject_reason + '</div>' : '') +
-      '</div>' +
-      btns +
-    '</div>';
-  }).join('');
-}
-
-async function approveCM(reqId) {
-  var res  = await fetch('/api/manager/client-meeting-requests/' + reqId + '/approve', {method:'POST', headers:{'X-Auth-Token':SESSION_TOKEN,'Content-Type':'application/json'}});
-  var data = await res.json();
-  if (data.success) {
-    loadClientMeetingRequests('pending');
-    mgrShowToast('Client meeting approved. Room: ' + data.room_id, 'green');
-  } else {
-    mgrShowToast(data.error || 'Failed to approve', 'red');
-  }
-}
-
-async function rejectCM(reqId) {
-  var reason = prompt('Reason for rejection (optional):') || 'Rejected by manager';
-  var res    = await fetch('/api/manager/client-meeting-requests/' + reqId + '/reject', {
-    method:'POST', headers:{'X-Auth-Token':SESSION_TOKEN,'Content-Type':'application/json'},
-    body: JSON.stringify({reason: reason})
-  });
-  var data = await res.json();
-  if (data.success) { loadClientMeetingRequests('pending'); mgrShowToast('Request rejected.', 'yellow'); }
-}
-
-// ── MEETING LOGS ──────────────────────────────────────────────
-async function loadMgrMeetingLogs() {
-  var res   = await fetch('/api/manager/client-meeting-logs', {headers:{'X-Auth-Token':SESSION_TOKEN}});
-  var logs  = await res.json();
-  var tbody = document.getElementById('mgr-meeting-logs-body');
-  if (!Array.isArray(logs) || !logs.length) {
-    tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--muted);font-size:12px;">No meeting logs yet.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = logs.map(function(l) {
-    return '<tr style="border-bottom:1px solid rgba(30,45,69,0.5);">' +
-      '<td style="padding:11px 14px;font-size:13px;">' + (l.employee_name||'—') + '</td>' +
-      '<td style="padding:11px 14px;font-size:13px;color:var(--blue);">' + (l.client_name||'—') + ' <span style="font-size:10px;color:var(--muted);">(' + (l.client_company||'') + ')</span></td>' +
-      '<td style="padding:11px 14px;font-size:12px;font-family:var(--mono);color:var(--muted);">' + _fmtDate(l.scheduled_time) + '</td>' +
-      '<td style="padding:11px 14px;font-size:12px;color:var(--text);">' + (l.agenda||'—') + '</td>' +
-      '<td style="padding:11px 14px;font-size:12px;color:var(--green);">' + (l.approved_by_name||'—') + '</td>' +
-    '</tr>';
-  }).join('');
-}
-
-// ── SOCKET — CLIENT MEETING REQUESTS ────────────────────────
-socket.on('client_meeting_request', function(data) {
-  var badge = document.getElementById('cm-pending-badge');
-  var cur = parseInt(badge.textContent) || 0;
-  badge.style.display = 'inline-block';
-  badge.textContent = cur + 1;
-  mgrShowToast('📋 Client meeting request from ' + data.employee_name + ' for ' + data.client_name, 'yellow');
-  if (document.querySelector('.section-dlp.active') && document.querySelector('.section-dlp.active').id === 'tab-meetinghub') {
-    loadClientMeetingRequests('pending');
-  }
-});
-
-function mgrShowToast(msg, color) {
-  var colors = {green:'var(--green)', yellow:'var(--yellow)', red:'var(--red)'};
-  var c = colors[color] || colors.green;
-  var el = document.createElement('div');
-  el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid '+c+';border-radius:10px;padding:12px 18px;font-size:12px;font-family:var(--mono);z-index:9999;max-width:360px;color:'+c+';box-shadow:0 4px 20px rgba(0,0,0,.4);';
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(function(){el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(function(){el.remove();},400);}, 5000);
-}
-
-// Auto load on panel switch
-var _mgrOrigShowPanel = showPanel;
-showPanel = function(name) {
-  _mgrOrigShowPanel(name);
-  if (name === 'meetinghub') loadClientMeetingRequests('pending');
-};
-
-// Load pending count on init
-(function() {
-  setTimeout(function() {
-    fetch('/api/manager/client-meeting-requests?status=pending', {headers:{'X-Auth-Token':SESSION_TOKEN}})
-      .then(function(r){return r.json();})
-      .then(function(reqs){
-        if (Array.isArray(reqs) && reqs.length) {
-          var badge = document.getElementById('cm-pending-badge');
-          badge.style.display = 'inline-block';
-          badge.textContent   = reqs.length;
-        }
-      }).catch(function(){});
-  }, 1500);
-})();
 
 </script>
 <!-- ══ EMAIL ATTACH — VFS FILE PICKER OVERLAY ══════════════════════════════ -->
