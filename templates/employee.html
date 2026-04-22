@@ -1081,8 +1081,17 @@ socket.on("reconnect", function() { socket.emit("register", {email:SESSION_EMAIL
 socket.on("new_event", function(d) {
   if (d.email && d.email !== SESSION_EMAIL && d.user && d.user !== SESSION_EMAIL) return;
   if (d.type === "CAMERA_BLOCKED") {
-    if (document.getElementById("view-modal").style.display !== "none") closeView();
-    secAlert("CAMERA BLOCKED", "Camera app blocked.\nDocument viewer closed.\nIncident logged.", "red");
+    // Close all open file tabs and stop camera monitoring
+    _fvTabs = []; _fvActiveId = null;
+    var fvPanel = document.getElementById("fm-viewer-panel");
+    if (fvPanel) fvPanel.style.display = "none";
+    var oldModal = document.getElementById("view-modal");
+    if (oldModal) oldModal.style.display = "none";
+    stopCamWatch();
+    currentFid = null; currentFname = null;
+    var camEl = document.getElementById("st-cam");
+    if (camEl) { camEl.textContent = "THREAT!"; camEl.style.color = "var(--red)"; }
+    secAlert("⊘ PHONE DETECTED — FILES CLOSED", "Phone or recording attempt detected by webcam.\nAll files closed automatically.\nIncident reported to manager.", "red");
   }
   if (d.type === "USB_INSERTED") {
     secAlert("USB BLOCKED", "USB device detected and ejected.\nProhibited by company policy.\nReported to manager.", "orange");
@@ -2458,9 +2467,10 @@ function startCamWatch(){
       if(data.phone_detected){
         // Close ALL open file tabs first
         _fvTabs=[]; _fvActiveId=null;
-        document.getElementById("fm-viewer-panel").style.display="none";
-        var modal=document.getElementById("view-modal");
-        if(modal) modal.style.display="none";
+        var fvPanel = document.getElementById("fm-viewer-panel");
+        if(fvPanel) fvPanel.style.display="none";
+        var oldModal=document.getElementById("view-modal");
+        if(oldModal) oldModal.style.display="none";
         // Now stop cam watch (clears intervals + tells agent file closed)
         stopCamWatch();
         currentFid=null; currentFname=null;

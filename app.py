@@ -31,7 +31,8 @@ from models.files import (
     save_file_record, get_files_for_employee, get_all_files,
     get_file_by_id, get_file_by_id_unrestricted, delete_file_record,
     create_approval_request, get_pending_approvals, get_all_approvals,
-    get_employee_requests, resolve_approval, get_approval_by_id, UPLOAD_FOLDER
+    get_employee_requests, resolve_approval, get_approval_by_id, UPLOAD_FOLDER,
+    save_file_to_gridfs, get_file_from_gridfs, delete_file_from_gridfs
 )
 from werkzeug.utils import secure_filename
 import uuid
@@ -957,9 +958,9 @@ def upload_file():
 
     ext           = file.filename.rsplit(".", 1)[1].lower()
     unique_name   = uuid.uuid4().hex + "." + ext
-    save_path     = os.path.join(UPLOAD_FOLDER, unique_name)
-    file.save(save_path)
-    file_size = os.path.getsize(save_path)
+    file_bytes    = file.read()
+    file_size     = len(file_bytes)
+    save_file_to_gridfs(unique_name, file_bytes, file.content_type)
 
     record = save_file_record(
         filename      = unique_name,
@@ -1007,20 +1008,20 @@ def manager_view_file(file_id):
     rec = get_file_by_id_unrestricted(file_id)
     if not rec:
         return jsonify({"error": "File not found."}), 404
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if not os.path.exists(disk_path):
-        return jsonify({"error": "File not found on disk."}), 404
     mime  = rec.get("file_type") or "application/octet-stream"
     fname = rec.get("original_name", "file")
     log_activity(request.auth_email, "FILE_VIEWED",
                  "Manager viewed: " + fname, "Manager Dashboard",
                  request.remote_addr, "LOW")
-    from flask import send_file, make_response
+    from flask import make_response, Response
     if request.method == "HEAD":
         resp = make_response("", 200)
         resp.headers["Content-Type"] = mime
         return resp
-    resp = make_response(send_file(disk_path, mimetype=mime, as_attachment=False))
+    file_bytes = get_file_from_gridfs(rec["filename"])
+    if file_bytes is None:
+        return jsonify({"error": "File not found in storage."}), 404
+    resp = make_response(Response(file_bytes, mimetype=mime))
     resp.headers["Content-Disposition"] = 'inline; filename="' + fname + '"'
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     return resp
@@ -1069,9 +1070,7 @@ def manager_delete_file(file_id):
     rec = get_file_by_id(file_id)
     if not rec:
         return jsonify({"error": "File not found."}), 404
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if os.path.exists(disk_path):
-        os.remove(disk_path)
+    delete_file_from_gridfs(rec["filename"])
     delete_file_record(file_id)
     return jsonify({"message": "File deleted."})
 
@@ -2606,15 +2605,38 @@ def file_viewing_status():
     return jsonify({"active": False})
 
 
+
+# In-memory phone detection flags keyed by email — no disk files needed
+_phone_flags = {}
+
+
+@app.route("/api/agent/phone-flag", methods=["POST"])
+def agent_phone_flag():
+    """Called by monitor.py when a phone is detected during file viewing."""
+    token = request.headers.get("X-Auth-Token") or request.args.get("token", "")
+    if not token or token not in active_tokens:
+        return jsonify({"error": "Unauthorized"}), 403
+    email = active_tokens[token]
+    _phone_flags[email] = True
+    # Immediately notify the browser to close the file viewer
+    emit_to_user(email, "new_event", {
+        "type":   "CAMERA_BLOCKED",
+        "detail": "Phone detected — file access suspended.",
+        "time":   datetime.utcnow().strftime("%H:%M:%S")
+    })
+    log_security_event(email, "PHONE_DETECTED",
+                       "Phone detected during file viewing — file access suspended.",
+                       "Agent Monitor", "-", blocked=True)
+    print("[AGENT] Phone flag set for: " + email)
+    return jsonify({"ok": True})
+
+
 @app.route("/api/agent/phone-status")
 @login_required(roles=["employee", "manager"])
 def phone_status():
-    safe     = request.auth_email.replace("@", "_").replace(".", "_")
-    flag     = os.path.join(os.path.dirname(__file__), "phone_detected_" + safe + ".flag")
-    detected = os.path.exists(flag)
-    if detected:
-        os.remove(flag)
-    return jsonify({"phone_detected": detected})
+    """Browser polls this; returns True once then clears the flag."""
+    detected = _phone_flags.pop(request.auth_email, False)
+    return jsonify({"phone_detected": bool(detected)})
 
 
 # ===============================================================
