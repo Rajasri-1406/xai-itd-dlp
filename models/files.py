@@ -233,15 +233,20 @@ def get_approval_by_id(request_id):
 # Files are stored inside MongoDB (GridFS) so they survive Render restarts.
 # The disk UPLOAD_FOLDER is kept only as a temp workspace for scanning.
 
-import gridfs as _gridfs
-_fs = _gridfs.GridFS(db)
+try:
+    from gridfs import GridFS as _GridFS
+    _fs = _GridFS(db)
+except Exception as _gfs_err:
+    print(f"[GridFS] init error: {_gfs_err}")
+    _fs = None
 
 
 def save_file_to_gridfs(filename, file_bytes, content_type="application/octet-stream"):
-    """Store file bytes in GridFS under the given filename key.
-    If a file with the same filename already exists it is replaced."""
+    """Store file bytes in GridFS. Replaces any previous version with same filename."""
+    if _fs is None:
+        print("[GridFS] GridFS not available")
+        return False
     try:
-        # Remove any previous version with same filename
         for old in _fs.find({"filename": filename}):
             _fs.delete(old._id)
         _fs.put(file_bytes, filename=filename, content_type=content_type)
@@ -253,6 +258,8 @@ def save_file_to_gridfs(filename, file_bytes, content_type="application/octet-st
 
 def get_file_from_gridfs(filename):
     """Return file bytes from GridFS, or None if not found."""
+    if _fs is None:
+        return None
     try:
         f = _fs.find_one({"filename": filename})
         if f:
@@ -265,6 +272,8 @@ def get_file_from_gridfs(filename):
 
 def delete_file_from_gridfs(filename):
     """Delete all GridFS chunks for the given filename."""
+    if _fs is None:
+        return False
     try:
         for f in _fs.find({"filename": filename}):
             _fs.delete(f._id)
