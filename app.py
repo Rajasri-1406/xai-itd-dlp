@@ -67,8 +67,81 @@ app = Flask(__name__)
 app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
 
-# Active session tokens {token: email}
-active_tokens = {}
+# ── Active session tokens — MongoDB-backed so they survive Render restarts ──
+from models.user import users_col as _users_col_ref
+_tokens_col = _users_col_ref.database["active_tokens"]
+_tokens_col.create_index("token", unique=True)
+try:
+    _tokens_col.create_index("expires_at", expireAfterSeconds=0)
+except Exception:
+    pass
+
+
+class _ActiveTokens:
+    """dict-like {token: email} backed by MongoDB. Survives server restarts."""
+
+    def __init__(self):
+        self._cache = {}
+        for doc in _tokens_col.find({}, {"_id": 0, "token": 1, "email": 1}):
+            self._cache[doc["token"]] = doc["email"]
+
+    def __contains__(self, token):
+        if token in self._cache:
+            return True
+        doc = _tokens_col.find_one({"token": token})
+        if doc:
+            self._cache[token] = doc["email"]
+            return True
+        return False
+
+    def __getitem__(self, token):
+        if token not in self._cache:
+            doc = _tokens_col.find_one({"token": token})
+            if doc:
+                self._cache[token] = doc["email"]
+            else:
+                raise KeyError(token)
+        return self._cache[token]
+
+    def __setitem__(self, token, email):
+        self._cache[token] = email
+        try:
+            _tokens_col.update_one(
+                {"token": token},
+                {"$set": {"token": token, "email": email,
+                           "expires_at": datetime.utcnow() + timedelta(hours=24)}},
+                upsert=True
+            )
+        except Exception:
+            pass
+
+    def __delitem__(self, token):
+        self._cache.pop(token, None)
+        try:
+            _tokens_col.delete_one({"token": token})
+        except Exception:
+            pass
+
+    def get(self, token, default=None):
+        try:
+            return self[token]
+        except KeyError:
+            return default
+
+    def __len__(self):
+        return len(self._cache)
+
+    def values(self):
+        return self._cache.values()
+
+    def keys(self):
+        return self._cache.keys()
+
+    def items(self):
+        return self._cache.items()
+
+
+active_tokens = _ActiveTokens()
 
 # ── Meeting & Client blueprints ───────────────────────────────
 from routes.meetings           import meetings_bp
@@ -1240,23 +1313,22 @@ def employee_view_file(file_id):
     if not allowed:
         return jsonify({"error": "Access denied."}), 403
 
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if not os.path.exists(disk_path):
-        return jsonify({"error": "File not found on server."}), 404
-
     log_activity(email, "FILE_VIEWED",
                  "Viewed file: " + rec["original_name"],
                  "Employee Dashboard", request.remote_addr, "LOW")
 
-    mime = rec.get("file_type") or "application/octet-stream"
+    mime  = rec.get("file_type") or "application/octet-stream"
     fname = rec.get("original_name", "file")
 
-    from flask import send_file, make_response
+    from flask import make_response, Response
     if request.method == "HEAD":
         resp = make_response("", 200)
         resp.headers["Content-Type"] = mime
         return resp
-    resp = make_response(send_file(disk_path, mimetype=mime, as_attachment=False))
+    file_bytes = get_file_from_gridfs(rec["filename"])
+    if file_bytes is None:
+        return jsonify({"error": "File not found in storage."}), 404
+    resp = make_response(Response(file_bytes, mimetype=mime))
     resp.headers["Content-Disposition"] = 'inline; filename="' + fname + '"'
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     return resp
@@ -1265,19 +1337,19 @@ def employee_view_file(file_id):
 # ──────────────────────────────────────────────────────────────
 # SHARED FILE PREVIEW HELPER
 # ──────────────────────────────────────────────────────────────
-def _generate_file_preview_html(disk_path, original_name, mime):
+def _generate_file_preview_html(file_bytes, original_name, mime):
     import html as _html
+    import io as _io
     ext = os.path.splitext(original_name)[1].lower().lstrip(".")
 
     text_exts = {"txt","log","md","py","js","ts","css","html","xml","yaml","yml",
                  "json","sh","bat","ini","cfg","env","csv","tsv"}
     if ext in text_exts or "text" in (mime or "") or "json" in (mime or "") or "xml" in (mime or ""):
         try:
-            with open(disk_path, "r", encoding="utf-8", errors="replace") as fh:
-                raw = fh.read(80000)
+            raw = file_bytes.decode("utf-8", errors="replace")[:80000]
             if ext == "csv" or "csv" in (mime or ""):
-                import csv, io
-                reader = csv.reader(io.StringIO(raw))
+                import csv
+                reader = csv.reader(_io.StringIO(raw))
                 rows = list(reader)[:500]
                 thead = "<tr>" + "".join("<th>" + _html.escape(str(c)) + "</th>" for c in (rows[0] if rows else [])) + "</tr>"
                 tbody = "".join("<tr>" + "".join("<td>" + _html.escape(str(c)) + "</td>" for c in row) + "</tr>" for row in rows[1:100])
@@ -1308,7 +1380,7 @@ def _generate_file_preview_html(disk_path, original_name, mime):
     if ext in ("docx", "doc"):
         try:
             import docx as _docx
-            doc = _docx.Document(disk_path)
+            doc = _docx.Document(_io.BytesIO(file_bytes))
             parts = []
             for para in doc.paragraphs:
                 text = para.text.strip()
@@ -1365,7 +1437,7 @@ def _generate_file_preview_html(disk_path, original_name, mime):
     if ext in ("xlsx", "xls"):
         try:
             import openpyxl
-            wb = openpyxl.load_workbook(disk_path, read_only=True, data_only=True)
+            wb = openpyxl.load_workbook(_io.BytesIO(file_bytes), read_only=True, data_only=True)
             sheets_html = ""
             for sheet_name in wb.sheetnames[:5]:
                 ws = wb[sheet_name]
@@ -1405,7 +1477,7 @@ def _generate_file_preview_html(disk_path, original_name, mime):
     if ext in ("pptx", "ppt"):
         try:
             from pptx import Presentation
-            prs = Presentation(disk_path)
+            prs = Presentation(_io.BytesIO(file_bytes))
             slides_html = ""
             for i, slide in enumerate(prs.slides[:30]):
                 texts = []
@@ -1454,11 +1526,11 @@ def employee_preview_file(file_id):
     if not allowed:
         return jsonify({"error": "Access denied."}), 403
 
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if not os.path.exists(disk_path):
-        return jsonify({"error": "File not found on disk."}), 404
+    file_bytes = get_file_from_gridfs(rec["filename"])
+    if file_bytes is None:
+        return jsonify({"error": "File not found in storage."}), 404
 
-    html_out, status = _generate_file_preview_html(disk_path, rec.get("original_name", "file"), rec.get("file_type", ""))
+    html_out, status = _generate_file_preview_html(file_bytes, rec.get("original_name", "file"), rec.get("file_type", ""))
     if status != 200:
         return "", 415
     from flask import Response
@@ -1471,11 +1543,12 @@ def manager_preview_file(file_id):
     rec = get_file_by_id_unrestricted(file_id)
     if not rec:
         return jsonify({"error": "File not found."}), 404
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if not os.path.exists(disk_path):
-        return jsonify({"error": "File not found on disk."}), 404
 
-    html_out, status = _generate_file_preview_html(disk_path, rec.get("original_name", "file"), rec.get("file_type", ""))
+    file_bytes = get_file_from_gridfs(rec["filename"])
+    if file_bytes is None:
+        return jsonify({"error": "File not found in storage."}), 404
+
+    html_out, status = _generate_file_preview_html(file_bytes, rec.get("original_name", "file"), rec.get("file_type", ""))
     if status != 200:
         return "", 415
     from flask import Response
@@ -1552,16 +1625,17 @@ def employee_download_file(file_id):
     if not approved:
         return jsonify({"error": "Download not approved. Please request access first."}), 403
 
-    disk_path = os.path.join(UPLOAD_FOLDER, rec["filename"])
-    if not os.path.exists(disk_path):
-        return jsonify({"error": "File not found on server."}), 404
-
     log_activity(email, "FILE_DOWNLOADED",
                  "Downloaded: " + rec["original_name"],
                  "Employee Dashboard", request.remote_addr, "MEDIUM")
 
-    from flask import send_file
-    return send_file(disk_path, as_attachment=True, download_name=rec["original_name"])
+    file_bytes = get_file_from_gridfs(rec["filename"])
+    if file_bytes is None:
+        return jsonify({"error": "File not found in storage."}), 404
+    from flask import make_response, Response
+    resp = make_response(Response(file_bytes, mimetype=rec.get("file_type","application/octet-stream")))
+    resp.headers["Content-Disposition"] = 'attachment; filename="' + rec["original_name"] + '"'
+    return resp
 
 
 @app.route("/api/employee/my-file-approvals")
@@ -2097,9 +2171,14 @@ def admin_send_file():
         return jsonify({"error": "At least one recipient is required."}), 400
     ext         = file.filename.rsplit(".", 1)[1].lower()
     unique_name = uuid.uuid4().hex + "." + ext
-    save_path   = os.path.join(UPLOAD_FOLDER, unique_name)
-    file.save(save_path)
-    file_size = os.path.getsize(save_path)
+    file_bytes  = file.read()
+    file_size   = len(file_bytes)
+
+    # Save to temp disk for DLP scan, then store in GridFS
+    save_path = os.path.join(UPLOAD_FOLDER, unique_name)
+    with open(save_path, "wb") as _f:
+        _f.write(file_bytes)
+
     record = save_file_record(
         filename       = unique_name,
         original_name  = secure_filename(file.filename),
@@ -2112,10 +2191,9 @@ def admin_send_file():
         scan_engine    = "admin-send",
         scan_detail    = "Sent by admin to: " + ", ".join(recipients)
     )
+    save_file_to_gridfs(unique_name, file_bytes, file.content_type)
+
     # ── DLP scan: scan against each recipient's role ─────────────────
-    # Pass recipient email (not admin) so policy engine evaluates the
-    # sensitivity against the employee role — giving BLOCKED/WARNED for
-    # HIGH/CRITICAL files instead of the admin's blanket ALLOWED.
     try:
         from dlp.policy_engine import scan_and_enforce
         for recipient_email in recipients:
@@ -2128,7 +2206,11 @@ def admin_send_file():
             )
     except Exception as _dlp_err:
         print("[DLP] scan_and_enforce error (admin send): " + str(_dlp_err))
-    # ─────────────────────────────────────────────────────────────────
+    finally:
+        try:
+            os.remove(save_path)
+        except Exception:
+            pass
 
     for email in recipients:
         emit_to_user(email, "file_uploaded", {
@@ -2325,6 +2407,15 @@ def employee_upload_doc():
     final_path = os.path.join(UPLOAD_FOLDER, final_name)
     os.rename(temp_path, final_path)
     file_size = os.path.getsize(final_path)
+
+    # Save to GridFS then remove temp file
+    with open(final_path, "rb") as _fh:
+        final_bytes = _fh.read()
+    save_file_to_gridfs(final_name, final_bytes, file.content_type)
+    try:
+        os.remove(final_path)
+    except Exception:
+        pass
 
     record = save_file_record(
         filename       = final_name,
@@ -2538,7 +2629,39 @@ def ai_risk_scores():
 # PHONE DETECTION + FILE VIEWING STATE
 # ===============================================================
 
-file_viewing_users = {}
+# ── File viewing state — MongoDB-backed so agent polling survives restarts ──
+_fv_col = _users_col_ref.database["file_viewing_state"]
+_fv_col.create_index("email", unique=True)
+
+
+class _FileViewingUsers:
+    """dict-like {email: bool} backed by MongoDB."""
+
+    def __init__(self):
+        self._cache = {}
+        for doc in _fv_col.find({}, {"_id": 0, "email": 1, "active": 1}):
+            self._cache[doc["email"]] = doc.get("active", False)
+
+    def __setitem__(self, email, active):
+        self._cache[email] = bool(active)
+        try:
+            _fv_col.update_one(
+                {"email": email},
+                {"$set": {"email": email, "active": bool(active),
+                           "updated_at": datetime.utcnow()}},
+                upsert=True
+            )
+        except Exception:
+            pass
+
+    def get(self, email, default=False):
+        return self._cache.get(email, default)
+
+    def items(self):
+        return self._cache.items()
+
+
+file_viewing_users = _FileViewingUsers()
 
 # Latest webcam JPEG per user — pushed by monitor.py, polled by browser
 _cam_frames = {}
@@ -2605,20 +2728,19 @@ def file_viewing_status():
     return jsonify({"active": False})
 
 
-
-# In-memory phone detection flags keyed by email — no disk files needed
+# In-memory phone detection flags {email: True} — short-lived, no need to persist
 _phone_flags = {}
 
 
 @app.route("/api/agent/phone-flag", methods=["POST"])
 def agent_phone_flag():
-    """Called by monitor.py when a phone is detected during file viewing."""
+    """Called by monitor.py when phone/recording is detected near screen."""
     token = request.headers.get("X-Auth-Token") or request.args.get("token", "")
     if not token or token not in active_tokens:
         return jsonify({"error": "Unauthorized"}), 403
     email = active_tokens[token]
     _phone_flags[email] = True
-    # Immediately notify the browser to close the file viewer
+    # Immediately close file in browser via socket — no waiting for 2s poll
     emit_to_user(email, "new_event", {
         "type":   "CAMERA_BLOCKED",
         "detail": "Phone detected — file access suspended.",
@@ -2627,14 +2749,14 @@ def agent_phone_flag():
     log_security_event(email, "PHONE_DETECTED",
                        "Phone detected during file viewing — file access suspended.",
                        "Agent Monitor", "-", blocked=True)
-    print("[AGENT] Phone flag set for: " + email)
+    print("[APP] Phone flag set for: " + email)
     return jsonify({"ok": True})
 
 
 @app.route("/api/agent/phone-status")
 @login_required(roles=["employee", "manager"])
 def phone_status():
-    """Browser polls this; returns True once then clears the flag."""
+    """Browser polls this every 2s; returns True once then clears the flag."""
     detected = _phone_flags.pop(request.auth_email, False)
     return jsonify({"phone_detected": bool(detected)})
 
@@ -2900,15 +3022,13 @@ def mail_get_attachment(file_id):
     )
     if not allowed:
         return jsonify({'error': 'Access denied'}), 403
-    filepath = os.path.join(UPLOAD_FOLDER, rec['filename'])
-    if not os.path.exists(filepath):
-        return jsonify({'error': 'File not found on disk'}), 404
-    return _send_file(
-        filepath,
-        mimetype      = rec.get('file_type', 'application/octet-stream'),
-        as_attachment = True,
-        download_name = rec.get('original_name', rec['filename'])
-    )
+    file_bytes = get_file_from_gridfs(rec['filename'])
+    if file_bytes is None:
+        return jsonify({'error': 'File not found in storage'}), 404
+    from flask import make_response, Response
+    resp = make_response(Response(file_bytes, mimetype=rec.get('file_type', 'application/octet-stream')))
+    resp.headers['Content-Disposition'] = 'attachment; filename="' + rec.get('original_name', rec['filename']) + '"'
+    return resp
 
 
 def _fmt_msg(d, viewer_email):
