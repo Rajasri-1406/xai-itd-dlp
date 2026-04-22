@@ -247,22 +247,37 @@ def employee_my_clients():
     assignments = list(_col("client_assignments").find(
         {"employee_email": email, "is_active": True}
     ))
-    # Enrich with full client details
+    # Use data already stored in assignment doc — avoids ObjectId conversion issues
+    # Also try to enrich from clients collection if possible
     result = []
     for a in assignments:
+        # Try fetching fresh client data
+        client = None
         try:
-            client = _col("clients").find_one({"_id": ObjectId(a["client_id"])})
+            client = _col("clients").find_one({"_id": ObjectId(str(a["client_id"]))})
         except Exception:
-            client = None
+            pass
+
         if client:
             result.append({
-                "client_id":      str(client["_id"]),
-                "name":           client["name"],
-                "email":          client.get("email", ""),
-                "phone":          client.get("phone", ""),
-                "company":        client.get("company", ""),
-                "notes":          client.get("notes", ""),
-                "assigned_at":    a["assigned_at"].strftime("%Y-%m-%d") if hasattr(a.get("assigned_at"), "strftime") else ""
+                "client_id":   str(client["_id"]),
+                "name":        client.get("name", a.get("client_name", "")),
+                "email":       client.get("email", ""),
+                "phone":       client.get("phone", ""),
+                "company":     client.get("company", a.get("client_company", "")),
+                "notes":       client.get("notes", ""),
+                "assigned_at": a["assigned_at"].strftime("%Y-%m-%d") if hasattr(a.get("assigned_at"), "strftime") else ""
+            })
+        elif a.get("client_name"):
+            # Fallback: use data stored directly in assignment doc
+            result.append({
+                "client_id":   str(a.get("client_id", "")),
+                "name":        a.get("client_name", ""),
+                "email":       a.get("client_email", ""),
+                "phone":       "",
+                "company":     a.get("client_company", ""),
+                "notes":       "",
+                "assigned_at": a["assigned_at"].strftime("%Y-%m-%d") if hasattr(a.get("assigned_at"), "strftime") else ""
             })
     return jsonify(result)
 
@@ -480,11 +495,61 @@ def manager_approve_request(req_id):
         "time":             datetime.utcnow().strftime("%H:%M:%S")
     })
 
+    # ── SEND MEETING INVITE EMAIL ─────────────────────────────────────────────
+    # Priority: 1) email from request body  2) CLIENT_MEETING_EMAIL in app.py
+    email_sent    = False
+    send_to_email = ""
+    try:
+        from app import send_meeting_invite_email, CLIENT_MEETING_EMAIL
+
+        # Get email from request body if manager entered one in modal
+        body         = request.get_json(silent=True) or {}
+        custom_email = (body.get("send_to_email") or "").strip()
+
+        # Use custom email if provided, else fall back to static CLIENT_MEETING_EMAIL
+        send_to_email = custom_email if custom_email else CLIENT_MEETING_EMAIL
+
+        # Only send if a real email address is configured
+        if send_to_email and send_to_email != "YOUR_CLIENT_EMAIL@example.com":
+            # Build join URL from request host
+            join_url = request.host_url.rstrip("/") + "/join/" + room_id
+
+            # Format scheduled time safely
+            st = req.get("scheduled_time")
+            if hasattr(st, "strftime"):
+                scheduled_str = st.strftime("%Y-%m-%d %H:%M")
+            elif st:
+                scheduled_str = str(st)
+            else:
+                scheduled_str = "TBD"
+
+            email_sent = send_meeting_invite_email(
+                to_email       = send_to_email,
+                client_name    = req.get("client_name", ""),
+                employee_name  = req.get("employee_name", ""),
+                join_url       = join_url,
+                password       = meeting["password"],
+                scheduled_time = scheduled_str,
+                agenda         = req.get("agenda", "")
+            )
+            print(f"[MEETING] Email {'sent' if email_sent else 'FAILED'} to {send_to_email} for room {room_id}")
+        else:
+            print(f"[MEETING] No email configured — skipping invite for room {room_id}")
+    except Exception as e:
+        print(f"[MEETING] Email error: {e}")
+        email_sent = False
+
     from models.user import log_activity
     log_activity(email, "CLIENT_MEETING_APPROVED",
         "Approved client meeting for " + req["employee_name"] + " with " + req["client_name"],
         "Manager Dashboard", request.remote_addr, "LOW")
-    return jsonify({"success": True, "room_id": room_id})
+    return jsonify({
+        "success":    True,
+        "room_id":    room_id,
+        "password":   meeting["password"],
+        "email_sent": email_sent,
+        "send_to":    send_to_email
+    })
 
 
 @client_bp.route("/api/manager/client-meeting-requests/<req_id>/reject", methods=["POST"])

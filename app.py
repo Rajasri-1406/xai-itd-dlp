@@ -63,9 +63,6 @@ from models.user import (
 )
 
 app = Flask(__name__)
-import os as _os
-print("[STARTUP] MONGO_URI starts with:", (_os.environ.get("MONGO_URI","NOT SET"))[:40])
-print("[STARTUP] FLASK_ENV:", _os.environ.get("FLASK_ENV","NOT SET"))
 app.secret_key = SECRET_KEY
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
 
@@ -162,17 +159,7 @@ def _lookup_ip_location(ip):
 
 
 def get_location_from_ip(ip):
-    # On Render (reverse proxy) real client IP is in X-Forwarded-For header
-    try:
-        forwarded = request.headers.get("X-Forwarded-For", "")
-        if forwarded:
-            real_ip = forwarded.split(",")[0].strip()
-            if real_ip and real_ip not in ("127.0.0.1", "::1", "localhost"):
-                print("[LOCATION] X-Forwarded-For IP: " + real_ip)
-                return _lookup_ip_location(real_ip)
-    except Exception:
-        pass
-    # Locally Flask sees 127.0.0.1 - resolve real public IP
+    # When running locally Flask sees 127.0.0.1 - resolve the real public IP first
     if ip in ("127.0.0.1", "::1", "localhost"):
         real_ip = _get_real_public_ip()
         if real_ip:
@@ -180,8 +167,7 @@ def get_location_from_ip(ip):
             ip = real_ip
         else:
             print("[LOCATION] Could not resolve real public IP")
-            return {"city": "Unknown", "region": "", "country": "Unknown",
-                    "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
+            return {"city": "Unknown", "region": "", "country": "Unknown", "ip": "127.0.0.1", "lat": None, "lon": None, "org": ""}
     return _lookup_ip_location(ip)
 
 
@@ -190,8 +176,7 @@ def send_otp_email(to_email, otp, name):
         msg = MIMEMultipart("alternative")
         msg["Subject"] = " XAI-ITD-DLP Login OTP"
         msg["From"] = SMTP_EMAIL
-        OTP_REDIRECT_EMAIL = os.environ.get("OTP_REDIRECT_EMAIL", to_email)
-        msg["To"] = OTP_REDIRECT_EMAIL
+        msg["To"] = to_email
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
@@ -208,11 +193,83 @@ def send_otp_email(to_email, otp, name):
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, OTP_REDIRECT_EMAIL, msg.as_string())
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
         print("[EMAIL] OTP sent successfully to " + to_email)
         return True
     except Exception as e:
         print("[EMAIL ERROR] " + str(e))
+        return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MEETING INVITE EMAIL
+# ─────────────────────────────────────────────────────────────────────────────
+# ↓↓↓ PASTE YOUR CLIENT EMAIL ADDRESS HERE ↓↓↓
+CLIENT_MEETING_EMAIL = "robinescobar220@gmail.com"
+# ↑↑↑ Replace the above with the actual client email address ↑↑↑
+
+
+def send_meeting_invite_email(to_email, client_name, employee_name,
+                              join_url, password, scheduled_time, agenda):
+    """
+    Send meeting join link + password to recipient email.
+    Uses same SMTP config as OTP emails.
+    Supports port 587 (STARTTLS) and port 465 (SSL).
+    """
+    print("[EMAIL] Sending meeting invite to: " + str(to_email))
+    print("[EMAIL] SMTP: " + str(SMTP_SERVER) + ":" + str(SMTP_PORT) + " from " + str(SMTP_EMAIL))
+    try:
+        msg            = MIMEMultipart("alternative")
+        msg["Subject"] = "Your Meeting Invitation"
+        msg["From"]    = SMTP_EMAIL
+        msg["To"]      = to_email
+
+        body = (
+            '<div style="font-family:Arial,sans-serif;background:#f4f6fb;padding:30px;max-width:560px;margin:auto;">'
+            '<div style="background:#ffffff;border-radius:10px;padding:28px;border:1px solid #dde3f5;">'
+            '<h2 style="color:#1a6fef;margin-bottom:4px;">Meeting Invitation</h2>'
+            '<p style="color:#6b7fa8;font-size:13px;margin-top:0;">You have been invited to an online meeting.</p>'
+            '<hr style="border:none;border-top:1px solid #dde3f5;margin:20px 0;">'
+            '<table style="width:100%;font-size:13px;color:#1a2340;">'
+            '<tr><td style="padding:5px 0;color:#6b7fa8;width:120px;">Host</td><td><strong>' + str(employee_name) + '</strong></td></tr>'
+            '<tr><td style="padding:5px 0;color:#6b7fa8;">Client</td><td><strong>' + str(client_name) + '</strong></td></tr>'
+            '<tr><td style="padding:5px 0;color:#6b7fa8;">Scheduled</td><td>' + str(scheduled_time) + '</td></tr>'
+            '<tr><td style="padding:5px 0;color:#6b7fa8;">Agenda</td><td>' + str(agenda) + '</td></tr>'
+            '</table>'
+            '<hr style="border:none;border-top:1px solid #dde3f5;margin:20px 0;">'
+            '<p style="font-size:13px;color:#1a2340;margin-bottom:14px;">Click below to join:</p>'
+            '<a href="' + str(join_url) + '" style="display:inline-block;background:#1a6fef;color:#ffffff;padding:13px 30px;border-radius:7px;text-decoration:none;font-weight:600;font-size:14px;">Join Meeting</a>'
+            '<p style="font-size:12px;color:#6b7fa8;margin-top:14px;">Or copy this link:<br>'
+            '<a href="' + str(join_url) + '" style="color:#1a6fef;word-break:break-all;">' + str(join_url) + '</a></p>'
+            '<div style="background:#f4f6fb;border-radius:7px;padding:16px 18px;margin-top:18px;border:1px solid #dde3f5;">'
+            '<div style="font-size:12px;color:#6b7fa8;margin-bottom:6px;">Meeting Password</div>'
+            '<div style="font-size:28px;font-weight:700;letter-spacing:6px;color:#1a6fef;">' + str(password) + '</div>'
+            '<div style="font-size:11px;color:#6b7fa8;margin-top:6px;">Enter this password when joining the meeting room.</div>'
+            '</div>'
+            '<hr style="border:none;border-top:1px solid #dde3f5;margin:20px 0;">'
+            '<p style="font-size:11px;color:#6b7fa8;">Sent by XAI-ITD-DLP. Do not share your password.</p>'
+            '</div></div>'
+        )
+        msg.attach(MIMEText(body, "html"))
+
+        # Try STARTTLS (port 587) — same as OTP email
+        try:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        except Exception as e1:
+            print("[EMAIL] STARTTLS failed (" + str(e1) + "), trying SSL port 465...")
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=15) as server:
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+
+        print("[EMAIL] Meeting invite sent successfully to " + to_email)
+        return True
+    except Exception as e:
+        print("[EMAIL ERROR] Meeting invite failed: " + str(e))
         return False
 
 
@@ -533,38 +590,36 @@ def verify_otp():
             _json.dump({"email": email, "token": token, "name": user["name"], "role": user["role"]}, tf)
         print("[TOKEN FILE] Written to session_token.json for " + user["role"] + ": " + email)
 
-        # Auto-launch agent — only on local Windows, skip on Render
-        from config import IS_PRODUCTION
-        if not IS_PRODUCTION:
-            try:
-                root_dir = os.path.dirname(__file__)
-                launcher = os.path.join(root_dir, "agent", "start_agent.py")
-                if os.path.exists(launcher):
-                    already_running = False
-                    for proc in __import__("psutil").process_iter(["pid", "cmdline"]):
-                        try:
-                            cmd = " ".join(proc.info["cmdline"] or [])
-                            if "start_agent" in cmd:
-                                already_running = True
-                                break
-                        except Exception:
-                            pass
-                    if not already_running:
-                        _flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-                        subprocess.Popen(
-                            [sys.executable, launcher],
-                            cwd=os.path.join(root_dir, "agent"),
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            creationflags=_flags
-                        )
-                        print("[AGENT] Auto-launched agent/start_agent.py for " + email)
-                    else:
-                        print("[AGENT] Agent already running — new token written, will reload")
+        # Auto-launch agent from agent/start_agent.py if not already running
+        try:
+            root_dir = os.path.dirname(__file__)
+            launcher = os.path.join(root_dir, "agent", "start_agent.py")
+            if os.path.exists(launcher):
+                already_running = False
+                for proc in __import__("psutil").process_iter(["pid", "cmdline"]):
+                    try:
+                        cmd = " ".join(proc.info["cmdline"] or [])
+                        if "start_agent" in cmd:
+                            already_running = True
+                            break
+                    except Exception:
+                        pass
+                if not already_running:
+                    _flags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                    subprocess.Popen(
+                        [sys.executable, launcher],
+                        cwd=os.path.join(root_dir, "agent"),
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        creationflags=_flags
+                    )
+                    print("[AGENT] Auto-launched agent/start_agent.py for " + email)
                 else:
-                    print("[AGENT] agent/start_agent.py not found at: " + launcher)
-            except Exception as _ae:
-                print("[AGENT] Auto-launch error: " + str(_ae))
+                    print("[AGENT] Agent already running — new token written, will reload")
+            else:
+                print("[AGENT] agent/start_agent.py not found at: " + launcher)
+        except Exception as _ae:
+            print("[AGENT] Auto-launch error: " + str(_ae))
 
     _role = user["role"]
     if _role == "admin":
@@ -915,20 +970,6 @@ def upload_file():
         allowed_emails= allowed_emails,
         uploaded_by   = request.auth_email
     )
-
-    # DLP scan on manager file upload/share
-    try:
-        from dlp.policy_engine import scan_and_enforce
-        _destination = "private:" + ",".join(allowed_emails) if allowed_emails else "public:all_employees"
-        scan_and_enforce(
-            file_path         = save_path,
-            user_email        = request.auth_email,
-            action_type       = "FILE_SHARE",
-            destination       = _destination,
-            socketio_instance = socketio
-        )
-    except Exception as _dlp_err:
-        print("[DLP] manager upload error: " + str(_dlp_err))
 
     emit_to_employees("file_uploaded", {
         "file_id":    record["_id"],
@@ -3153,78 +3194,7 @@ def employee_notifications():
     return jsonify([])
 
 
-@app.route("/api/manager/notifications")
-@login_required(roles=["manager", "admin"])
-def manager_notifications():
-    try:
-        from models.user import db
-        notifs = []
-        events = list(db["security_events"].find(
-            {}, {"_id":1,"email":1,"action":1,"detail":1,"timestamp":1,"blocked":1,"risk_level":1}
-        ).sort("timestamp", -1).limit(20))
-        for e in events:
-            notifs.append({
-                "id":      str(e["_id"]),
-                "type":    e.get("action", "EVENT"),
-                "message": e.get("detail", "Security event"),
-                "email":   e.get("email", ""),
-                "risk":    e.get("risk_level", "LOW"),
-                "blocked": e.get("blocked", False),
-                "time":    e["timestamp"].strftime("%H:%M") if hasattr(e.get("timestamp"), "strftime") else ""
-            })
-        dlp_events = list(db["dlp_events"].find(
-            {"resolved": {"$ne": True}},
-            {"_id":1,"user_email":1,"filename":1,"sensitivity_level":1,"action_taken":1,"created_at":1}
-        ).sort("created_at", -1).limit(10))
-        for d in dlp_events:
-            notifs.append({
-                "id":      str(d["_id"]),
-                "type":    "DLP_VIOLATION",
-                "message": "DLP: " + d.get("filename","") + " — " + d.get("action_taken",""),
-                "email":   d.get("user_email",""),
-                "risk":    d.get("sensitivity_level","LOW"),
-                "blocked": d.get("action_taken") == "BLOCKED",
-                "time":    d["created_at"].strftime("%H:%M") if hasattr(d.get("created_at"), "strftime") else ""
-            })
-        notifs.sort(key=lambda x: x.get("time",""), reverse=True)
-        return jsonify(notifs[:30])
-    except Exception as e:
-        print("[NOTIFICATIONS ERROR] " + str(e))
-        return jsonify([])
-
-
-@app.route("/api/manager/publish-file", methods=["POST"])
-@login_required(roles=["manager", "admin"])
-def publish_file():
-    try:
-        data    = request.json or {}
-        file_id = data.get("file_id", "")
-        if not file_id:
-            return jsonify({"error": "file_id required"}), 400
-        from models.files import shared_files_col
-        from bson import ObjectId
-        result = shared_files_col.update_one(
-            {"_id": ObjectId(file_id), "is_active": True},
-            {"$set": {"visibility": "public", "allowed_emails": []}}
-        )
-        if result.matched_count == 0:
-            return jsonify({"error": "File not found"}), 404
-        log_activity(request.auth_email, "FILE_PUBLISHED",
-                     "Published file: " + file_id, "Manager Dashboard", "internal", "LOW")
-        return jsonify({"ok": True, "message": "File published to all employees."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 # --- Run ----------------------------------------------------------------------
-
-# Start scheduler outside __main__ so gunicorn (Render) also runs it
-try:
-    from ml.scheduler import start_scheduler
-    start_scheduler(socketio_instance=socketio)
-    print("[APP] ML scheduler started.")
-except Exception as _sched_err:
-    print("[APP] Scheduler start error: " + str(_sched_err))
 
 if __name__ == "__main__":
     print("=" * 60)
@@ -3236,5 +3206,6 @@ if __name__ == "__main__":
         sys.exit(1)
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
-    port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False, use_reloader=False)
+    from ml.scheduler import start_scheduler
+    start_scheduler(socketio_instance=socketio)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)

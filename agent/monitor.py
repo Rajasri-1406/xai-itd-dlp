@@ -40,7 +40,8 @@ except ImportError:
 
 # ── Config ────────────────────────────────────────────────────────────────────
 SERVER_URL = os.environ.get("XAI_SERVER_URL", "https://xai-itd-dlp.onrender.com").rstrip("/")
-
+HEARTBEAT_INTERVAL      = 5
+CLIPBOARD_CLEAR_INTERVAL = 2
 SENSITIVE_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".csv", ".txt", ".pptx",
                         ".py", ".db", ".json", ".xml"}
 MONITORED_PATHS = [
@@ -451,18 +452,28 @@ def _is_file_open():
 
 
 def _write_phone_flag():
-    """Write flag file so Flask knows to tell browser to close file."""
+    """Notify server via API that phone was detected — works on both local and Render."""
     try:
-        safe_email = (USER_EMAIL or "unknown").replace("@", "_").replace(".", "_")
-        flag_path  = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            f"phone_detected_{safe_email}.flag"
+        requests.post(
+            f"{SERVER_URL}/api/agent/phone-flag",
+            headers={"X-Auth-Token": SESSION_TOKEN},
+            timeout=3
         )
-        with open(flag_path, "w") as f:
-            f.write(datetime.utcnow().isoformat())
-        print(f"[AGENT] Flag written: {flag_path}")
+        print("[AGENT] Phone flag sent to server via API")
     except Exception as e:
-        print(f"[AGENT] Flag write error: {e}")
+        print(f"[AGENT] Phone flag API error: {e}")
+        # Fallback: write local file (local dev only)
+        try:
+            safe_email = (USER_EMAIL or "unknown").replace("@", "_").replace(".", "_")
+            flag_path  = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                f"phone_detected_{safe_email}.flag"
+            )
+            with open(flag_path, "w") as _f:
+                _f.write(datetime.utcnow().isoformat())
+            print(f"[AGENT] Flag written locally (fallback): {flag_path}")
+        except Exception as e2:
+            print(f"[AGENT] Flag write error: {e2}")
 
 
 _push_counter = 0
@@ -795,63 +806,21 @@ def start_agent(email, token, name="Employee"):
 
 # ── STANDALONE ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    import getpass, json
-
-    print("=" * 55)
-    print("  XAI-ITD-DLP Agent — Direct Start")
-    print(f"  Server: {SERVER_URL}")
-    print("=" * 55)
-
-    # Try local session_token.json first (local dev fallback)
+    import json
     TOKEN_FILE = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "session_token.json"
     )
     if os.path.exists(TOKEN_FILE):
-        try:
-            with open(TOKEN_FILE) as f:
-                s = json.load(f)
-            email = s["email"]
-            token = s["token"]
-            name  = s.get("name", "Employee")
-            print(f"[AGENT] Auto-loaded session: {name} ({email})")
-        except Exception:
-            token = None
+        with open(TOKEN_FILE) as f:
+            s = json.load(f)
+        email = s["email"]
+        token = s["token"]
+        name  = s.get("name", "Employee")
+        print(f"Auto-loaded: {name} ({email})")
     else:
-        token = None
-
-    # If no local token — login via server API
-    if not token:
-        print("[AGENT] No local session found. Login via server API.")
-        while True:
-            email    = input("Employee email:  ").strip()
-            password = getpass.getpass("Password:        ")
-            try:
-                res = requests.post(
-                    f"{SERVER_URL}/api/login",
-                    json={"email": email, "password": password},
-                    timeout=15
-                )
-                if res.status_code == 200:
-                    data  = res.json()
-                    token = data.get("token", "")
-                    name  = data.get("name", "Employee")
-                    if not token:
-                        otp = input("Enter OTP: ").strip()
-                        res2 = requests.post(
-                            f"{SERVER_URL}/api/verify-otp",
-                            json={"email": email, "otp": otp},
-                            timeout=15
-                        )
-                        if res2.status_code == 200:
-                            data2 = res2.json()
-                            token = data2.get("token", "")
-                            name  = data2.get("name", "Employee")
-                    if token:
-                        print(f"[AGENT] Login successful — {name}")
-                        break
-                print(f"[AGENT] Login failed ({res.status_code}) — try again.")
-            except Exception as e:
-                print(f"[AGENT] Connection error: {e}")
+        email = input("Employee email: ").strip()
+        token = input("Session token:  ").strip()
+        name  = input("Your name:      ").strip() or "Employee"
 
     start_agent(email, token, name)

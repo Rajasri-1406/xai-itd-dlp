@@ -491,8 +491,10 @@ select.fc-t{cursor:pointer;}
   <div class="slabel-dlp">Audit Logs</div>
   <div class="nav-item-dlp" onclick="showPanel('auditlogs')" data-p="auditlogs"><i class="fas fa-list-check"></i> Audit Logs</div>
 
+  <div class="slabel-dlp">Clients</div>
+
+
   <div class="slabel-dlp">Meetings</div>
-  <div class="nav-item-dlp" onclick="showPanel('clients')" data-p="clients"><i class="fas fa-address-book"></i> My Clients</div>
   <div class="nav-item-dlp" onclick="openMeetingHub()" data-p="meetings"><i class="fas fa-video"></i> Meeting Hub</div>
 
   <div class="sidebar-footer-dlp">
@@ -1054,46 +1056,7 @@ select.fc-t{cursor:pointer;}
 
 
   <!-- MY CLIENTS PANEL -->
-  <div class="section-dlp" id="panel-clients">
-    <div class="ph-t">
-      <div class="ph-title-t"><i class="fas fa-address-book"></i> My Clients</div>
-      <button class="btn btn-ghost-t btn-sm-t" onclick="loadMyClients()"><i class="fas fa-rotate"></i> Refresh</button>
-    </div>
 
-    <!-- Client cards -->
-    <div id="my-clients-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:24px;"></div>
-
-    <!-- Request client meeting -->
-    <div class="card" style="margin-bottom:13px;">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:14px;letter-spacing:1px;"><i class="fas fa-calendar-plus" style="color:var(--blue);margin-right:6px;"></i> REQUEST CLIENT MEETING</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">SELECT CLIENT</div>
-          <select id="cm-client-select" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;"><option value="">— Choose client —</option></select>
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">DATE &amp; TIME</div>
-          <input type="datetime-local" id="cm-scheduled" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">DURATION (MIN)</div>
-          <input type="number" id="cm-duration" value="60" min="15" max="480" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
-        </div>
-        <div>
-          <div style="font-size:10px;color:var(--muted);margin-bottom:5px;font-family:var(--mono);">AGENDA / THEME</div>
-          <input type="text" id="cm-agenda" placeholder="e.g. Q1 Review, Product Demo..." style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;">
-        </div>
-      </div>
-      <button onclick="submitClientMeetingRequest()" style="background:linear-gradient(135deg,rgba(0,136,255,.15),rgba(0,255,136,.15));border:1px solid rgba(0,136,255,.4);color:var(--blue);padding:9px 20px;border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:1px;"><i class="fas fa-paper-plane"></i> SEND FOR APPROVAL</button>
-      <div id="cm-req-msg" style="margin-top:8px;font-size:11px;font-family:var(--mono);"></div>
-    </div>
-
-    <!-- My requests history -->
-    <div class="card">
-      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;"><i class="fas fa-clock-rotate-left" style="color:var(--yellow);margin-right:6px;"></i> MY MEETING REQUESTS</div>
-      <div id="cm-requests-list"></div>
-    </div>
-  </div>
 
 </div>
 
@@ -2475,6 +2438,9 @@ var currentFid=null, currentFname=null, camInt=null, phoneInt=null;
 
 function startCamWatch(){
   camOverlayShow(currentFname||'');
+  // Update status indicator
+  var el=document.getElementById("st-cam");
+  if(el){el.textContent="ACTIVE";el.style.color="var(--green)";}
   // Tell agent: file opened — webcam should turn ON
   apiFetch("/api/agent/file-viewing",{
     method:"POST",
@@ -2518,11 +2484,19 @@ function startCamWatch(){
 function stopCamWatch(){
   camOverlayHide();
   // Tell agent: file closed — webcam should turn OFF
+  // Call both endpoints: file-viewing (session-based) + file-closed (token-based backup)
   apiFetch("/api/agent/file-viewing",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({active:false})
   }).catch(function(){});
+  apiFetch("/api/agent/file-closed",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"}
+  }).catch(function(){});
+  // Update status indicator
+  var el=document.getElementById("st-cam");
+  if(el){el.textContent="OFF";el.style.color="var(--muted)";}
   if(camInt){clearInterval(camInt);camInt=null;}
   if(phoneInt){clearInterval(phoneInt);phoneInt=null;}
 }
@@ -4652,160 +4626,21 @@ function openMeetingHub() {
 }
 
 // ── MY CLIENTS ───────────────────────────────────────────────
-var _myClients = [];
-
-async function loadMyClients() {
-  var res = await apiFetch('/api/employee/my-clients');
-  var data = await res.json();
-  _myClients = Array.isArray(data) ? data : [];
-
-  // Populate dropdown for meeting request
-  var sel = document.getElementById('cm-client-select');
-  sel.innerHTML = '<option value="">— Choose client —</option>';
-  _myClients.forEach(function(c) {
-    sel.innerHTML += '<option value="' + c.client_id + '">' + c.name + ' — ' + c.company + '</option>';
-  });
-
-  // Render client cards
-  var list = document.getElementById('my-clients-list');
-  if (!_myClients.length) {
-    list.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">No clients assigned yet. Contact your admin.</div>';
-    return;
-  }
-  list.innerHTML = _myClients.map(function(c) {
-    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;">' +
-      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">' +
-        '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,rgba(0,136,255,.2),rgba(0,255,136,.2));border:1px solid rgba(0,136,255,.3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--blue);">' +
-          c.name.charAt(0).toUpperCase() +
-        '</div>' +
-        '<div>' +
-          '<div style="font-weight:700;font-size:13px;">' + c.name + '</div>' +
-          '<div style="font-size:11px;color:var(--muted);">' + (c.company || '—') + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div style="font-size:11px;color:var(--muted);font-family:var(--mono);display:flex;flex-direction:column;gap:4px;">' +
-        (c.email ? '<span><i class="fas fa-envelope" style="width:14px;color:var(--blue);"></i> ' + c.email + '</span>' : '') +
-        (c.phone ? '<span><i class="fas fa-phone" style="width:14px;color:var(--green);"></i> ' + c.phone + '</span>' : '') +
-        (c.notes ? '<span style="margin-top:4px;color:var(--text);font-family:sans-serif;font-size:11px;">' + c.notes + '</span>' : '') +
-      '</div>' +
-      '<div style="margin-top:10px;font-size:10px;color:var(--muted);font-family:var(--mono);">Assigned: ' + (c.assigned_at || '—') + '</div>' +
-    '</div>';
-  }).join('');
-
-  // Load request history
-  loadClientMeetingRequests();
-}
-
-async function submitClientMeetingRequest() {
-  var clientId  = document.getElementById('cm-client-select').value;
-  var scheduled = document.getElementById('cm-scheduled').value;
-  var duration  = document.getElementById('cm-duration').value;
-  var agenda    = document.getElementById('cm-agenda').value.trim();
-  var msgEl     = document.getElementById('cm-req-msg');
-
-  if (!clientId || !scheduled || !agenda) {
-    msgEl.style.color = 'var(--red)';
-    msgEl.textContent = 'Please fill in all fields.';
-    return;
-  }
-
-  var res = await apiFetch('/api/employee/request-client-meeting', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      client_id:        clientId,
-      scheduled_time:   scheduled,
-      duration_minutes: parseInt(duration),
-      agenda:           agenda
-    })
-  });
-  var data = await res.json();
-  if (data.success) {
-    msgEl.style.color = 'var(--green)';
-    msgEl.textContent = '✓ Request sent to manager for approval.';
-    document.getElementById('cm-client-select').value = '';
-    document.getElementById('cm-scheduled').value = '';
-    document.getElementById('cm-agenda').value = '';
-    loadClientMeetingRequests();
-  } else {
-    msgEl.style.color = 'var(--red)';
-    msgEl.textContent = '✗ ' + (data.error || 'Failed to send request.');
-  }
-}
-
-async function loadClientMeetingRequests() {
-  var res  = await apiFetch('/api/employee/client-meeting-requests');
-  var reqs = await res.json();
-  var el   = document.getElementById('cm-requests-list');
-  if (!Array.isArray(reqs) || !reqs.length) {
-    el.innerHTML = '<div style="color:var(--muted);font-size:12px;font-family:var(--mono);padding:12px 0;">No requests yet.</div>';
-    return;
-  }
-  var statusColor = {pending:'var(--yellow)', approved:'var(--green)', rejected:'var(--red)'};
-  el.innerHTML = reqs.map(function(r) {
-    var sc = statusColor[r.status] || 'var(--muted)';
-    var approvedBlock = '';
-    if (r.status === 'approved' && r.meeting_password) {
-      var joinUrl = window.location.origin + (r.client_link || '/join/' + r.room_id);
-      approvedBlock =
-        '<div style="margin-top:10px;background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.3);border-radius:8px;padding:12px 14px;">' +
-          '<div style="font-size:10px;color:var(--green);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;">✅ APPROVED — SHARE BELOW WITH CLIENT</div>' +
-          '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px;">' +
-            '<div style="font-size:12px;font-family:var(--mono);">🔑 Password: <strong style="color:var(--yellow);font-size:15px;letter-spacing:3px;">' + r.meeting_password + '</strong></div>' +
-          '</div>' +
-          '<div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;">🔗 ' +
-            '<a href="' + joinUrl + '" target="_blank" style="color:var(--blue);word-break:break-all;">' + joinUrl + '</a>' +
-          '</div>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-            '<button onclick="copyToClip(event, \'' + r.meeting_password + '\')" ' +
-              'style="padding:5px 12px;background:rgba(255,204,0,0.1);border:1px solid rgba(255,204,0,0.35);border-radius:5px;color:var(--yellow);font-family:var(--mono);font-size:10px;cursor:pointer;">📋 Copy Password</button>' +
-            '<button onclick="copyToClip(event, \'' + joinUrl + '\')" ' +
-              'style="padding:5px 12px;background:rgba(0,136,255,0.1);border:1px solid rgba(0,136,255,0.35);border-radius:5px;color:var(--blue);font-family:var(--mono);font-size:10px;cursor:pointer;">📋 Copy Link</button>' +
-          '</div>' +
-        '</div>';
-    }
-    return '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;">' +
-      '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
-        '<div>' +
-          '<div style="font-size:13px;font-weight:600;">' + r.client_name + ' <span style="font-size:10px;color:var(--muted);">(' + (r.client_company||'') + ')</span></div>' +
-          '<div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;">' +
-            '<i class="fas fa-calendar" style="margin-right:4px;"></i>' + (r.scheduled_time||'') +
-            ' &nbsp;·&nbsp; ' + (r.duration_minutes||60) + ' min' +
-            ' &nbsp;·&nbsp; ' + r.agenda +
-          '</div>' +
-          (r.reject_reason ? '<div style="font-size:11px;color:var(--red);margin-top:3px;">Reason: ' + r.reject_reason + '</div>' : '') +
-          (r.approved_by_name ? '<div style="font-size:10px;color:var(--muted);margin-top:3px;">' + (r.status==='approved'?'Approved':'Actioned') + ' by: ' + r.approved_by_name + '</div>' : '') +
-        '</div>' +
-        '<span style="padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;font-family:var(--mono);background:' + sc + '22;color:' + sc + ';border:1px solid ' + sc + '44;">' + (r.status||'').toUpperCase() + '</span>' +
-      '</div>' +
-      approvedBlock +
-    '</div>';
-  }).join('');
-}
-
-// ── CLIENT SOCKET NOTIFICATIONS ──────────────────────────────
+// ── CLIENT SOCKET NOTIFICATIONS (handled in Meeting Hub) ──────
 socket.on('client_assigned', function(data) {
   showNotifBanner('📋 New client assigned: ' + data.client_name + ' (' + data.client_company + ')', 'green');
-  if (document.querySelector('.nav-item-dlp.active') && document.querySelector('.nav-item-dlp.active').dataset.p === 'clients') {
-    loadMyClients();
-  }
 });
 
 socket.on('client_removed', function(data) {
   showNotifBanner('⚠ Client removed from your list: ' + data.client_name, 'yellow');
-  if (document.querySelector('.nav-item-dlp.active') && document.querySelector('.nav-item-dlp.active').dataset.p === 'clients') {
-    loadMyClients();
-  }
 });
 
 socket.on('client_meeting_approved', function(data) {
   showNotifBanner('✅ Client meeting APPROVED: ' + data.client_name + ' on ' + data.scheduled_time + ' — by ' + data.approved_by, 'green');
-  loadClientMeetingRequests();
 });
 
 socket.on('client_meeting_rejected', function(data) {
   showNotifBanner('❌ Client meeting REJECTED: ' + data.client_name + ' — ' + data.reason, 'red');
-  loadClientMeetingRequests();
 });
 
 function showNotifBanner(msg, color) {
@@ -4818,12 +4653,7 @@ function showNotifBanner(msg, color) {
   setTimeout(function() { el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(function(){el.remove();},400); }, 5000);
 }
 
-// Auto-load clients when switching to clients panel
-var _origShowPanel = showPanel;
-showPanel = function(name) {
-  _origShowPanel(name);
-  if (name === 'clients') loadMyClients();
-};
+
 
 </script>
 <!-- ══ EMAIL ATTACH — VFS FILE PICKER OVERLAY ══════════════════════════════ -->

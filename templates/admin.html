@@ -383,32 +383,42 @@
     <div class="card" style="max-width:680px;">
       <h3>&#128228; SEND FILE TO USER</h3>
 
-      <!-- Role filter + search -->
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
-        <div style="display:flex;gap:6px;">
-          <button class="btn-small btn-cyan" id="sf-filter-all"      onclick="sfSetFilter('all')"      style="font-size:10px;">ALL</button>
-          <button class="btn-small"          id="sf-filter-manager"  onclick="sfSetFilter('manager')"  style="font-size:10px;">MANAGERS</button>
-          <button class="btn-small"          id="sf-filter-employee" onclick="sfSetFilter('employee')" style="font-size:10px;">EMPLOYEES</button>
-        </div>
-        <input id="sf-search" type="text" placeholder="Search name or email…"
-          oninput="sfSearch()"
-          style="flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;" />
+      <!-- Audience mode selector -->
+      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Select Audience</div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
+        <button class="btn-small" id="sf-mode-all"      onclick="sfSetMode('all')"      style="font-size:10px;">&#127760; ALL (Public)</button>
+        <button class="btn-small" id="sf-mode-manager"  onclick="sfSetMode('manager')"  style="font-size:10px;">&#128084; ALL MANAGERS</button>
+        <button class="btn-small" id="sf-mode-employee" onclick="sfSetMode('employee')" style="font-size:10px;">&#128100; ALL EMPLOYEES</button>
+        <button class="btn-small btn-cyan" id="sf-mode-personal" onclick="sfSetMode('personal')" style="font-size:10px;">&#127919; SPECIFIC PERSON</button>
       </div>
 
-      <!-- User list -->
-      <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;background:var(--surface2);">
-        <div id="sf-list-inner" style="padding:4px 0;">
-          <div style="text-align:center;padding:20px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;">
-            Select a filter or search to load users
+      <!-- Broadcast info banner -->
+      <div id="sf-broadcast-banner" style="display:none;background:rgba(26,111,239,0.08);border:1px solid rgba(26,111,239,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px;"></div>
+
+      <!-- Personal mode only: search + list + chips -->
+      <div id="sf-personal-section" style="display:none;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;gap:6px;">
+            <button class="btn-small btn-cyan" id="sf-filter-all"      onclick="sfSetFilter('all')"      style="font-size:10px;">ALL</button>
+            <button class="btn-small"          id="sf-filter-manager"  onclick="sfSetFilter('manager')"  style="font-size:10px;">MANAGERS</button>
+            <button class="btn-small"          id="sf-filter-employee" onclick="sfSetFilter('employee')" style="font-size:10px;">EMPLOYEES</button>
+          </div>
+          <input id="sf-search" type="text" placeholder="Search name or email…"
+            oninput="sfSearch()"
+            style="flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;" />
+        </div>
+        <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;background:var(--surface2);">
+          <div id="sf-list-inner" style="padding:4px 0;">
+            <div style="text-align:center;padding:20px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;">
+              Select a filter or search to load users
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Selected recipients chips -->
-      <div style="margin-bottom:14px;">
-        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Selected Recipients</div>
-        <div id="sf-selected-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;align-items:center;">
-          <span id="sf-no-selection" style="color:var(--muted);font-size:12px;font-family:'Rajdhani',sans-serif;">None selected</span>
+        <div style="margin-bottom:14px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Selected Recipients</div>
+          <div id="sf-selected-chips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;align-items:center;">
+            <span id="sf-no-selection" style="color:var(--muted);font-size:12px;font-family:'Rajdhani',sans-serif;">None selected</span>
+          </div>
         </div>
       </div>
 
@@ -1017,17 +1027,41 @@ loadFeed();
 setInterval(loadStats, 10000);
 
 // ── SEND FILE FEATURE ─────────────────────────────────────────────────────────
+// ── SEND FILE — audience-aware ───────────────────────────────
+var sfMode      = 'personal';  // 'all' | 'manager' | 'employee' | 'personal'
 var sfFilter    = 'all';
-var sfAllUsers  = [];   // full list fetched from server
-var sfSelected  = {};   // { email: {name, email, role} }
+var sfAllUsers  = [];
+var sfSelected  = {};   // { email: {name, email, role} } — personal mode only
+
+function sfSetMode(mode) {
+  sfMode = mode;
+  ['all','manager','employee','personal'].forEach(function(m) {
+    var btn = document.getElementById('sf-mode-' + m);
+    if (btn) btn.className = (m === mode) ? 'btn-small btn-cyan' : 'btn-small';
+  });
+  var banner  = document.getElementById('sf-broadcast-banner');
+  var section = document.getElementById('sf-personal-section');
+  if (mode === 'personal') {
+    banner.style.display  = 'none';
+    section.style.display = 'block';
+  } else {
+    section.style.display = 'none';
+    sfSelected = {};
+    var labels = {
+      'all':      '🌐 PUBLIC BROADCAST — File will be visible to ALL managers and employees.',
+      'manager':  '👔 MANAGER BROADCAST — File will be sent privately to ALL managers.',
+      'employee': '👤 EMPLOYEE BROADCAST — File will be sent privately to ALL employees.'
+    };
+    banner.textContent   = labels[mode];
+    banner.style.display = 'block';
+  }
+}
 
 function sfSetFilter(role) {
   sfFilter = role;
   ['all','manager','employee'].forEach(function(r) {
     var btn = document.getElementById('sf-filter-' + r);
-    if (btn) {
-      btn.className = (r === role) ? 'btn-small btn-cyan' : 'btn-small';
-    }
+    if (btn) btn.className = (r === role) ? 'btn-small btn-cyan' : 'btn-small';
   });
   sfLoadUsers();
 }
@@ -1041,17 +1075,16 @@ function sfLoadUsers() {
       sfRenderList(users);
     })
     .catch(function() {
-      document.getElementById('sf-list-inner').innerHTML =
-        '<div style="text-align:center;padding:16px;color:var(--red);font-family:\'Share Tech Mono\',monospace;font-size:11px;">Failed to load users</div>';
+      var inner = document.getElementById('sf-list-inner');
+      if (inner) inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--red);font-family:\'Share Tech Mono\',monospace;font-size:11px;">Failed to load users</div>';
     });
 }
 
-function sfSearch() {
-  sfLoadUsers();
-}
+function sfSearch() { sfLoadUsers(); }
 
 function sfRenderList(users) {
   var inner = document.getElementById('sf-list-inner');
+  if (!inner) return;
   if (!users.length) {
     inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:1px;">No users found</div>';
     return;
@@ -1080,19 +1113,16 @@ function sfRenderList(users) {
 }
 
 function sfToggleUser(email, name, role) {
-  if (sfSelected[email]) {
-    delete sfSelected[email];
-  } else {
-    sfSelected[email] = {name: name, email: email, role: role};
-  }
+  if (sfSelected[email]) { delete sfSelected[email]; }
+  else { sfSelected[email] = {name: name, email: email, role: role}; }
   sfRenderChips();
   sfRenderList(sfAllUsers);
 }
 
 function sfRenderChips() {
   var container = document.getElementById('sf-selected-chips');
-  var noSel     = document.getElementById('sf-no-selection');
-  var keys      = Object.keys(sfSelected);
+  if (!container) return;
+  var keys = Object.keys(sfSelected);
   if (!keys.length) {
     container.innerHTML = '<span id="sf-no-selection" style="color:var(--muted);font-size:12px;font-family:\'Rajdhani\',sans-serif;">None selected</span>';
     return;
@@ -1110,21 +1140,27 @@ function sfRenderChips() {
 
 function sfShowMsg(msg, isErr) {
   var el = document.getElementById('sf-msg');
-  el.textContent = msg;
-  el.className   = 'msg-box ' + (isErr ? 'err' : 'ok');
+  el.textContent   = msg;
+  el.className     = 'msg-box ' + (isErr ? 'err' : 'ok');
   el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 5000);
 }
 
 function sfSend() {
-  var recipients = Object.keys(sfSelected);
-  if (!recipients.length) { sfShowMsg('Select at least one recipient.', true); return; }
   var fileInput = document.getElementById('sf-file-input');
   if (!fileInput.files.length) { sfShowMsg('Please choose a file to send.', true); return; }
 
   var fd = new FormData();
   fd.append('file', fileInput.files[0]);
-  fd.append('recipients', recipients.join(','));
+
+  if (sfMode === 'personal') {
+    var recipients = Object.keys(sfSelected);
+    if (!recipients.length) { sfShowMsg('Select at least one recipient.', true); return; }
+    fd.append('recipients', recipients.join(','));
+  } else {
+    // Broadcast: send audience, backend resolves all emails for that role
+    fd.append('audience', sfMode);
+  }
 
   var btn = document.querySelector('[onclick="sfSend()"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
