@@ -491,11 +491,7 @@ select.fc-t{cursor:pointer;}
   <div class="slabel-dlp">Audit Logs</div>
   <div class="nav-item-dlp" onclick="showPanel('auditlogs')" data-p="auditlogs"><i class="fas fa-list-check"></i> Audit Logs</div>
 
-  <div class="slabel-dlp">Clients</div>
-  <div class="nav-item-dlp" onclick="window.location.href='/meetings?token='+SESSION_TOKEN+'&page=client-requests'" data-p="client-requests"><i class="fas fa-calendar-plus"></i> Add Meeting</div>
-  <div class="nav-item-dlp" onclick="window.location.href='/meetings?token='+SESSION_TOKEN+'&page=my-requests'" data-p="my-requests"><i class="fas fa-list-check"></i> My Requests</div>
-
-  <div class="slabel-dlp">Meetings</div>
+  <div class="slabel-dlp">Meetings &amp; Clients</div>
   <div class="nav-item-dlp" onclick="openMeetingHub()" data-p="meetings"><i class="fas fa-video"></i> Meeting Hub</div>
 
   <div class="sidebar-footer-dlp">
@@ -1320,6 +1316,7 @@ async function loadOvLog(){
   try{
     var logs=await(await apiFetch("/api/employee/my-logs")).json();
     var tb=document.getElementById("ov-log");
+    if(!tb) return;
     if(!logs||!logs.length){tb.innerHTML="<tr><td colspan='4' class='empty'>No activity yet.</td></tr>";return;}
     tb.innerHTML=logs.slice(0,8).map(function(l){
       return "<tr>"+

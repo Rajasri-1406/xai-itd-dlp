@@ -809,15 +809,22 @@ function closeModal(id)     { document.getElementById(id).classList.remove("open
 
 // Load my assigned clients into the dropdown
 async function loadMyClientsForRequest() {
-  const data = await api("GET", "/api/employee/my-clients?token=" + TOKEN);
-  const clients = Array.isArray(data) ? data : [];
   const sel = document.getElementById("cr-client-select");
   if (!sel) return;
-  // API returns: client_id, name, company (not client_name/client_company)
-  sel.innerHTML = clients.length
-    ? '<option value="">— Choose your client —</option>' +
-      clients.map(c => `<option value="${c.client_id}">${c.name} (${c.company||""})</option>`).join("")
-    : '<option value="">No clients assigned to you</option>';
+  sel.innerHTML = '<option value="">⏳ Loading clients...</option>';
+  try {
+    const data = await api("GET", "/api/employee/my-clients?token=" + TOKEN);
+    const clients = Array.isArray(data) ? data : [];
+    if (clients.length) {
+      sel.innerHTML = '<option value="">— Choose your client —</option>' +
+        clients.map(c => `<option value="${c.client_id}">${c.name} (${c.company||""})</option>`).join("");
+    } else {
+      sel.innerHTML = '<option value="">No clients assigned to you yet — ask your manager</option>';
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="">⚠ Failed to load clients — check console</option>';
+    console.error("loadMyClientsForRequest error:", e);
+  }
 }
 
 // Employee submits a client meeting request
@@ -853,7 +860,8 @@ async function submitClientRequest() {
 // Load page based on role
 function loadClientRequestsPage() {
   if (ME.role === "employee") {
-    // check which sub-tab was requested (from URL param or default to 'add')
+    // Always reload clients every time this tab is opened
+    loadMyClientsForRequest();
     const urlTab = new URLSearchParams(window.location.search).get("page");
     if (urlTab === "my-requests") {
       crSwitchTab("myrequests");

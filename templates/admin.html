@@ -386,18 +386,21 @@
       <!-- Audience mode selector -->
       <div style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;">Select Audience</div>
       <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-        <button class="btn-small" id="sf-mode-all"      onclick="sfSetMode('all')"      style="font-size:10px;">&#127760; ALL (Public)</button>
-        <button class="btn-small" id="sf-mode-manager"  onclick="sfSetMode('manager')"  style="font-size:10px;">&#128084; ALL MANAGERS</button>
-        <button class="btn-small" id="sf-mode-employee" onclick="sfSetMode('employee')" style="font-size:10px;">&#128100; ALL EMPLOYEES</button>
-        <button class="btn-small btn-cyan" id="sf-mode-personal" onclick="sfSetMode('personal')" style="font-size:10px;">&#127919; SPECIFIC PERSON</button>
+        <button class="btn-small btn-cyan" id="sf-mode-all"      onclick="sfSetMode('all')"      style="font-size:10px;">&#127760; ALL (Public)</button>
+        <button class="btn-small"          id="sf-mode-manager"  onclick="sfSetMode('manager')"  style="font-size:10px;">&#128084; ALL MANAGERS</button>
+        <button class="btn-small"          id="sf-mode-employee" onclick="sfSetMode('employee')" style="font-size:10px;">&#128100; ALL EMPLOYEES</button>
+        <button class="btn-small"          id="sf-mode-personal" onclick="sfSetMode('personal')" style="font-size:10px;">&#127919; SPECIFIC PERSON</button>
       </div>
 
-      <!-- Broadcast info banner -->
-      <div id="sf-broadcast-banner" style="display:none;background:rgba(26,111,239,0.08);border:1px solid rgba(26,111,239,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px;"></div>
+      <!-- Broadcast info banner — shown for all/manager/employee modes -->
+      <div id="sf-broadcast-banner" style="background:rgba(26,111,239,0.08);border:1px solid rgba(26,111,239,0.3);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:1px;">
+        &#127760; PUBLIC BROADCAST — File will be visible to ALL managers and employees.
+      </div>
 
-      <!-- Personal mode only: search + list + chips -->
+      <!-- Personal mode only: search + role filter + list + chips -->
       <div id="sf-personal-section" style="display:none;">
         <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+          <!-- Role filter — only inside specific person mode -->
           <div style="display:flex;gap:6px;">
             <button class="btn-small btn-cyan" id="sf-filter-all"      onclick="sfSetFilter('all')"      style="font-size:10px;">ALL</button>
             <button class="btn-small"          id="sf-filter-manager"  onclick="sfSetFilter('manager')"  style="font-size:10px;">MANAGERS</button>
@@ -1027,32 +1030,47 @@ loadFeed();
 setInterval(loadStats, 10000);
 
 // ── SEND FILE FEATURE ─────────────────────────────────────────────────────────
-// ── SEND FILE — audience-aware ───────────────────────────────
-var sfMode      = 'personal';  // 'all' | 'manager' | 'employee' | 'personal'
-var sfFilter    = 'all';
-var sfAllUsers  = [];
-var sfSelected  = {};   // { email: {name, email, role} } — personal mode only
+var sfMode     = 'all';   // 'all' | 'manager' | 'employee' | 'personal'
+var sfFilter   = 'all';
+var sfAllUsers = [];
+var sfSelected = {};      // { email: {name,email,role} } — personal mode only
+
+// Audience mode → backend audience param mapping
+var sfAudienceMap = {
+  'all':      'public',
+  'manager':  'all_managers',
+  'employee': 'all_employees',
+  'personal': 'specific'
+};
+
+var sfBannerLabels = {
+  'all':      '🌐 PUBLIC BROADCAST — File will be visible to ALL managers and employees.',
+  'manager':  '👔 MANAGER BROADCAST — File will be sent privately to ALL active managers.',
+  'employee': '👤 EMPLOYEE BROADCAST — File will be sent privately to ALL active employees.'
+};
 
 function sfSetMode(mode) {
   sfMode = mode;
+
+  // Update audience button styles
   ['all','manager','employee','personal'].forEach(function(m) {
     var btn = document.getElementById('sf-mode-' + m);
     if (btn) btn.className = (m === mode) ? 'btn-small btn-cyan' : 'btn-small';
   });
+
   var banner  = document.getElementById('sf-broadcast-banner');
   var section = document.getElementById('sf-personal-section');
+
   if (mode === 'personal') {
+    // Show person picker, hide broadcast banner
     banner.style.display  = 'none';
     section.style.display = 'block';
+    sfSetFilter('all');   // auto-load users when switching to personal
   } else {
+    // Show broadcast banner, hide person picker
     section.style.display = 'none';
     sfSelected = {};
-    var labels = {
-      'all':      '🌐 PUBLIC BROADCAST — File will be visible to ALL managers and employees.',
-      'manager':  '👔 MANAGER BROADCAST — File will be sent privately to ALL managers.',
-      'employee': '👤 EMPLOYEE BROADCAST — File will be sent privately to ALL employees.'
-    };
-    banner.textContent   = labels[mode];
+    banner.textContent   = sfBannerLabels[mode];
     banner.style.display = 'block';
   }
 }
@@ -1068,7 +1086,12 @@ function sfSetFilter(role) {
 
 function sfLoadUsers() {
   var q = (document.getElementById('sf-search') || {}).value || '';
-  fetch('/api/admin/users-for-send?role=' + sfFilter + '&q=' + encodeURIComponent(q))
+  var inner = document.getElementById('sf-list-inner');
+  if (inner) inner.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-family:\'Share Tech Mono\',monospace;font-size:11px;letter-spacing:1px;">Loading...</div>';
+
+  fetch('/api/admin/users-for-send?role=' + sfFilter + '&q=' + encodeURIComponent(q), {
+    headers: {'X-Auth-Token': '{{ session_token }}'}
+  })
     .then(function(r){ return r.json(); })
     .then(function(users) {
       sfAllUsers = users;
@@ -1095,10 +1118,8 @@ function sfRenderList(users) {
     return '<div onclick="sfToggleUser(\'' + escAdmin(u.email) + '\',\'' + escAdmin(u.name) + '\',\'' + u.role + '\')" ' +
       'style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;' +
       'border-bottom:1px solid var(--border);transition:background .12s;' +
-      (selected ? 'background:rgba(26,111,239,0.08);' : '') + '" ' +
-      'onmouseover="if(!this.dataset.sel)this.style.background=\'rgba(26,111,239,0.04)\'" ' +
-      'onmouseout="if(!this.dataset.sel)this.style.background=\'\'" ' +
-      'data-email="' + escAdmin(u.email) + '" data-sel="' + (selected?'1':'') + '">' +
+      (selected ? 'background:rgba(26,111,239,0.08);' : '') + '"' +
+      'data-email="' + escAdmin(u.email) + '">' +
       '<div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--cyan));' +
         'display:flex;align-items:center;justify-content:center;font-family:\'Share Tech Mono\',monospace;font-size:11px;font-weight:700;color:#000;flex-shrink:0;">' +
         escAdmin((u.name||'?')[0].toUpperCase()) + '</div>' +
@@ -1150,31 +1171,33 @@ function sfSend() {
   var fileInput = document.getElementById('sf-file-input');
   if (!fileInput.files.length) { sfShowMsg('Please choose a file to send.', true); return; }
 
+  // Validate: specific mode needs at least one recipient
+  if (sfMode === 'personal' && !Object.keys(sfSelected).length) {
+    sfShowMsg('Please select at least one recipient.', true);
+    return;
+  }
+
   var fd = new FormData();
-  fd.append('file', fileInput.files[0]);
+  fd.append('file',     fileInput.files[0]);
+  fd.append('audience', sfAudienceMap[sfMode]);   // send correct backend key
 
   if (sfMode === 'personal') {
-    var recipients = Object.keys(sfSelected);
-    if (!recipients.length) { sfShowMsg('Select at least one recipient.', true); return; }
-    fd.append('recipients', recipients.join(','));
-  } else {
-    // Broadcast: send audience, backend resolves all emails for that role
-    fd.append('audience', sfMode);
+    fd.append('recipients', Object.keys(sfSelected).join(','));
   }
 
   var btn = document.querySelector('[onclick="sfSend()"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
   fetch('/api/admin/send-file', {
-    method: 'POST',
+    method:  'POST',
     headers: {'X-Auth-Token': '{{ session_token }}'},
-    body: fd
+    body:    fd
   })
   .then(function(r){ return r.json(); })
   .then(function(data) {
-    if (data.error) { sfShowMsg(data.error, true); }
+    if (data.error) { sfShowMsg('✖ ' + data.error, true); }
     else {
-      sfShowMsg('✓ ' + data.message, false);
+      sfShowMsg('✔ ' + data.message, false);
       sfSelected = {};
       sfRenderChips();
       sfRenderList(sfAllUsers);

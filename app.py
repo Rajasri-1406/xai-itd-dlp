@@ -475,7 +475,10 @@ def request_otp():
     elif not allowed_zones:
         loc_allowed = True
     elif city in ("Localhost", "Unknown", ""):
-        loc_allowed = False
+        # LOCAL MODE: geo-lookup failed or returned Unknown (common on localhost).
+        # Allow login so local development is not blocked.
+        # In production (app_deployed.py) this is set to False.
+        loc_allowed = True
     else:
         candidates  = [s.lower() for s in [city, region, country] if s and s not in ("Unknown", "Local", "")]
         loc_allowed = False
@@ -2165,36 +2168,60 @@ def admin_send_file():
         return jsonify({"error": "No file selected."}), 400
     if not allowed_file(file.filename):
         return jsonify({"error": "File type not allowed."}), 400
-    recipients_raw = request.form.get("recipients", "")
-    recipients = [e.strip().lower() for e in recipients_raw.split(",") if e.strip()]
-    if not recipients:
-        return jsonify({"error": "At least one recipient is required."}), 400
+    audience = request.form.get("audience", "specific")  # public | all_employees | all_managers | specific
+
+    # Resolve recipients and visibility based on audience
+    if audience == "public":
+        recipients = []
+        visibility  = "public"
+    elif audience == "all_employees":
+        recipients = [u["email"] for u in get_all_users_by_role("employee") if u.get("is_active", True)]
+        visibility  = "private"
+        if not recipients:
+            return jsonify({"error": "No active employees found."}), 400
+    elif audience == "all_managers":
+        recipients = [u["email"] for u in get_all_users_by_role("manager") if u.get("is_active", True)]
+        visibility  = "private"
+        if not recipients:
+            return jsonify({"error": "No active managers found."}), 400
+    else:
+        recipients_raw = request.form.get("recipients", "")
+        recipients = [e.strip().lower() for e in recipients_raw.split(",") if e.strip()]
+        visibility  = "private"
+        if not recipients:
+            return jsonify({"error": "Please select at least one recipient."}), 400
+
     ext         = file.filename.rsplit(".", 1)[1].lower()
     unique_name = uuid.uuid4().hex + "." + ext
     file_bytes  = file.read()
     file_size   = len(file_bytes)
 
-    # Save to temp disk for DLP scan, then store in GridFS
-    save_path = os.path.join(UPLOAD_FOLDER, unique_name)
-    with open(save_path, "wb") as _f:
-        _f.write(file_bytes)
+    # Step 1: Save to GridFS FIRST — bytes must exist before metadata record
+    gridfs_ok = save_file_to_gridfs(unique_name, file_bytes, file.content_type)
+    if not gridfs_ok:
+        return jsonify({"error": "Failed to store file in GridFS. Try again."}), 500
 
+    # Step 2: Save metadata record — only after bytes are safely stored
+    audience_label = {"public": "All (Public)", "all_employees": "All Employees",
+                      "all_managers": "All Managers"}.get(audience, ", ".join(recipients))
     record = save_file_record(
         filename       = unique_name,
         original_name  = secure_filename(file.filename),
         file_size      = file_size,
         file_type      = file.content_type,
-        visibility     = "private",
+        visibility     = visibility,
         allowed_emails = recipients,
         uploaded_by    = request.auth_email,
         scan_clean     = None,
         scan_engine    = "admin-send",
-        scan_detail    = "Sent by admin to: " + ", ".join(recipients)
+        scan_detail    = "Sent by admin to: " + audience_label
     )
-    save_file_to_gridfs(unique_name, file_bytes, file.content_type)
 
-    # ── DLP scan: scan against each recipient's role ─────────────────
+    # Step 3: DLP scan on temp disk copy (separate from GridFS bytes)
+    save_path = os.path.join(UPLOAD_FOLDER, unique_name)
     try:
+        with open(save_path, "wb") as _f:
+            _f.write(file_bytes)
         from dlp.policy_engine import scan_and_enforce
         for recipient_email in recipients:
             scan_and_enforce(
@@ -2216,7 +2243,16 @@ def admin_send_file():
         emit_to_user(email, "file_uploaded", {
             "file_id":    record["_id"],
             "name":       record["original_name"],
-            "visibility": "private",
+            "visibility": visibility,
+            "sent_by":    "Admin",
+            "time":       datetime.utcnow().strftime("%H:%M:%S")
+        })
+    # For public files, broadcast to all connected users
+    if audience == "public":
+        socketio.emit("file_uploaded", {
+            "file_id":    record["_id"],
+            "name":       record["original_name"],
+            "visibility": "public",
             "sent_by":    "Admin",
             "time":       datetime.utcnow().strftime("%H:%M:%S")
         })
@@ -2224,17 +2260,19 @@ def admin_send_file():
         "type":    "FILE_SENT_BY_ADMIN",
         "email":   request.auth_email,
         "user":    request.auth_email,
-        "detail":  "Admin sent file: " + record["original_name"] + " to " + ", ".join(recipients),
+        "detail":  "Admin sent file: " + record["original_name"] + " to " + audience_label,
         "location":"Admin Dashboard",
         "risk":    "LOW",
         "blocked": False,
         "time":    datetime.utcnow().strftime("%H:%M:%S")
     })
     log_activity(request.auth_email, "ADMIN_FILE_SENT",
-                 "Sent '" + record["original_name"] + "' to " + ", ".join(recipients),
+                 "Sent '" + record["original_name"] + "' to " + audience_label,
                  "Admin Dashboard", "internal", "LOW")
+    msg = "File sent publicly to all users." if audience == "public" else \
+          "File sent to " + str(len(recipients)) + " recipient(s)."
     return jsonify({
-        "message":    "File sent to " + str(len(recipients)) + " recipient(s).",
+        "message":    msg,
         "file":       record,
         "recipients": recipients
     })
@@ -3351,3 +3389,4 @@ if __name__ == "__main__":
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    
