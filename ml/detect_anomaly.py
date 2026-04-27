@@ -30,9 +30,14 @@ import networkx as nx
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # ── Config ───────────────────────────────────────────────────────────────────
-MONGO_URI  = "mongodb://localhost:27017/"
-DB_NAME    = "xai_itd_dlp"
-MODELS_DIR = r"D:\rajasri\xai_itd_dlp\ml\models"
+# Portable path — works on Render (Linux) and Windows localhost
+MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+
+try:
+    from config import MONGO_URI, DB_NAME
+except Exception:
+    MONGO_URI = "mongodb://localhost:27017/"
+    DB_NAME   = "xai_itd_dlp"
 
 os.makedirs(MODELS_DIR, exist_ok=True)
 
@@ -347,6 +352,25 @@ def is_zero_activity(feat_dict):
 def get_deviation_score(feat_dict, baseline):
     if not baseline:
         return 0.0
+
+    # New employee fix — less than 3 days history or all stds are zero
+    # Use absolute risk scoring instead of personal deviation
+    profile_days = baseline.get("profile_days", 0)
+    all_std_zero = all(
+        baseline.get(f"{col}_std", 0) == 0
+        for col in FEATURE_COLS
+    )
+
+    if profile_days < 3 or all_std_zero:
+        risky_sum = (
+            float(feat_dict.get("phone_detected_count", 0)) * 10 +
+            float(feat_dict.get("blocked_action_count", 0)) * 8  +
+            float(feat_dict.get("after_hrs_logon", 0))      * 15 +
+            float(feat_dict.get("usb_connect_count", 0))    * 10 +
+            float(feat_dict.get("file_to_removable", 0))    * 20
+        )
+        return round(min(risky_sum, 100), 2)
+
     devs = []
     for col in FEATURE_COLS:
         val = feat_dict.get(col, 0)
@@ -363,8 +387,11 @@ def get_rule_score(feat_dict):
     if feat_dict.get("usb_after_hrs", 0):             score += 15
     if feat_dict.get("file_to_removable", 0) > 0:    score += 20
     if feat_dict.get("file_risk_ratio", 0) > 0.5:    score += 15
-    if feat_dict.get("blocked_action_count", 0) > 2:  score += 20
-    if feat_dict.get("phone_detected_count", 0) > 0:  score += 10
+    # Scaled: each blocked action adds 4 points, capped at 30
+    if feat_dict.get("blocked_action_count", 0) > 2:
+        score += min(int(feat_dict.get("blocked_action_count", 0)) * 4, 30)
+    # Scaled: each phone detection adds 5 points, capped at 30
+    score += min(int(feat_dict.get("phone_detected_count", 0)) * 5, 30)
     if feat_dict.get("face_missing_count", 0) > 2:    score += 10
     if feat_dict.get("email_bcc_count", 0) > 5:       score += 10
     return min(score, 100)
@@ -507,9 +534,14 @@ def score_all_employees(models):
             "scored_at":       datetime.utcnow()
         })
 
-    db["threat_scores"].drop()
-    if threat_records:
-        db["threat_scores"].insert_many(threat_records)
+    # Use upsert per (user_email, day) instead of drop+insert
+    # This preserves any realtime scores written between scans
+    for rec in threat_records:
+        db["threat_scores"].replace_one(
+            {"user_email": rec["user_email"], "day": rec["day"]},
+            rec,
+            upsert=True
+        )
 
     print(f"  Saved {len(threat_records)} records → threat_scores")
     print(f"  ({skipped_zero} zero-activity → auto LOW/0)")
@@ -546,7 +578,3 @@ if __name__ == "__main__":
 
     print("\n[3/3] Complete.")
     client.close()
-    
-    
-    
-    

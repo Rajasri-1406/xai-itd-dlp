@@ -162,6 +162,9 @@ from routes.threat_api import threat_bp
 app.register_blueprint(threat_bp)
 from routes.xai_api import xai_bp, init_xai_bp
 app.register_blueprint(xai_bp)
+
+# Real-time AI scorer
+from ml.realtime_scorer import score_now as ai_score_now
 init_xai_bp()
 from models.user import db as _meeting_db
 register_meeting_sockets(socketio, _meeting_db)
@@ -640,6 +643,7 @@ def verify_otp():
         _detail_parts += " | Device: " + _fp_os
 
     log_activity(email, "LOGIN_SUCCESS", _detail_parts, loc_str, ip, risk_level=login_risk)
+    ai_score_now(email, "LOGIN_SUCCESS", blocked=False, socketio_instance=socketio)
 
     _emit_detail = "Login from " + loc_str
     if device_mismatch:
@@ -760,6 +764,9 @@ def receive_agent_event():
         log_security_event(email, event_type, detail, loc_str, ip, blocked=True)
     else:
         log_activity(email, event_type, detail, loc_str, ip, risk_level)
+
+    # ── Real-time AI scoring ──────────────────────────────────────────────────
+    ai_score_now(email, event_type, blocked=blocked, socketio_instance=socketio)
 
     socketio.emit("new_event", {
         "type": event_type,
@@ -3389,4 +3396,3 @@ if __name__ == "__main__":
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
-    

@@ -2862,8 +2862,8 @@ function loadAIRiskScores() {
 
         // Top features explanation
         var reason = 'Normal behavior pattern';
-        if (emp.note === 'no_activity') {
-          reason = 'No activity recorded — new or inactive employee';
+        if (emp.note === 'no_activity' || emp.note === 'no_activity_today') {
+          reason = 'No activity today — score carried from last active day';
         } else if (emp.top_features && emp.top_features.length > 0) {
           reason = emp.top_features.map(function(f) {
             return f.feature.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();}) +
@@ -2877,7 +2877,18 @@ function loadAIRiskScores() {
           'Deviation: ' + parseFloat(emp.deviation_score || 0).toFixed(1) + ' | ' +
           'Rules: '     + parseFloat(emp.rule_score      || 0).toFixed(1);
 
-        return '<div class="ai-emp-card" style="border-color:' + color + '33;background:' + bgColor + '">' +
+        // Stale score label
+        var today = new Date().toISOString().slice(0,10);
+        var scoredLabel, scoredColor;
+        if (emp.stale || (emp.day && emp.day !== today)) {
+          scoredLabel = '⚠ Last active: ' + (emp.day || 'unknown') + ' (no activity today)';
+          scoredColor = 'var(--yellow)';
+        } else {
+          scoredLabel = 'Scored: ' + (emp.day || '');
+          scoredColor = 'var(--muted)';
+        }
+
+        return '<div class="ai-emp-card" data-email="' + emp.user_email + '" style="border-color:' + color + '33;background:' + bgColor + '">' +
           '<div class="ai-card-top">' +
             '<div class="ai-avatar" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44">' + initials + '</div>' +
             '<div class="ai-card-info">' +
@@ -2897,8 +2908,8 @@ function loadAIRiskScores() {
           '</div>' +
           (label === 'CRITICAL' || label === 'HIGH' ?
             '<div class="ai-flagged-banner">⚠ ' + label + ' RISK — ANOMALY DETECTED BY AI MODEL</div>' : '') +
-          '<div style="margin-top:10px;font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--muted);text-align:right;">' +
-            'Scored: ' + (emp.day || '') +
+          '<div style="margin-top:10px;font-family:\'Share Tech Mono\',monospace;font-size:9px;color:' + scoredColor + ';text-align:right;">' +
+            scoredLabel +
           '</div>' +
           '<button onclick="downloadAuditReport(\'' + emp.user_email + '\')" ' +
             'style="margin-top:10px;width:100%;background:none;border:1px solid var(--green);' +
@@ -3002,25 +3013,226 @@ function triggerManualScan() {
 
 // ── SOCKET.IO — Critical alert toast ─────────────────────────────────────────
 socket.on('ai_critical_alert', function(data) {
-  var msg = '🚨 CRITICAL: ' + (data.user_email || '') +
-            ' — Score ' + parseFloat(data.risk_score||0).toFixed(1) +
-            ' — ' + (data.reason || '');
-  // Show as toast using existing toast system if available
-  if (typeof showToast === 'function') {
-    showToast('AI CRITICAL ALERT', msg, 'high');
-  } else {
-    // Fallback: simple notification
-    var toastEl = document.createElement('div');
-    toastEl.className = 'toast high';
-    toastEl.innerHTML = '<div class="toast-title">⚠ AI CRITICAL ALERT</div><div>' + msg + '</div>';
-    var tc = document.getElementById('toast-container');
-    if (tc) { tc.appendChild(toastEl); setTimeout(function(){toastEl.remove();}, 8000); }
+  var email  = data.user_email || '';
+  var score  = parseFloat(data.risk_score || 0).toFixed(1);
+  var reason = data.reason || 'Anomalous behavior detected';
+  showToast({ user: email.split('@')[0], email: email, type: 'AI_CRITICAL_RISK', detail: 'Score ' + score + ' — ' + reason }, true);
+  notifAdd({ icon: '🚨', iconBg: 'rgba(255,51,102,0.18)', text: 'CRITICAL RISK: ' + email + ' scored ' + score + ' — ' + reason, type: 'ai_critical' });
+  var aiTab = document.getElementById('tab-airisk');
+  if (aiTab && aiTab.classList.contains('active')) loadAIRiskScores();
+});
+
+socket.on('ai_score_update', function(data) {
+  var email  = data.user_email || '';
+  var score  = parseFloat(data.risk_score  || 0);
+  var prev   = parseFloat(data.prev_score  || 0);
+  var label  = data.risk_label || 'LOW';
+  var name   = data.name       || email.split('@')[0];
+  var evType = (data.event_type || '').replace(/_/g, ' ');
+  var color  = label === 'CRITICAL' ? '#ff3366' : label === 'HIGH' ? '#ff6688' : label === 'MEDIUM' ? '#ffcc00' : '#00ff88';
+  var delta  = score - prev;
+  var arrow  = delta > 0 ? 'UP' : delta < 0 ? 'DOWN' : '=';
+  var dStr   = (delta >= 0 ? '+' : '') + delta.toFixed(1);
+
+  _showAITicker(name, email, score, label, color, delta, dStr, evType);
+
+  if (label === 'HIGH' || label === 'CRITICAL' || Math.abs(delta) > 3) {
+    notifAdd({
+      icon:   label === 'CRITICAL' ? '🚨' : label === 'HIGH' ? '⚠️' : '📊',
+      iconBg: label === 'CRITICAL' ? 'rgba(255,51,102,0.18)' : 'rgba(255,102,136,0.15)',
+      text:   name + ' risk: ' + score.toFixed(1) + ' [' + label + '] ' + dStr + ' — ' + evType,
+      type:   'ai_score'
+    });
   }
-  // Reload scores if on airisk tab
-  if (document.getElementById('tab-airisk').classList.contains('active')) {
-    loadAIRiskScores();
+
+  if (label === 'HIGH' || label === 'CRITICAL') {
+    var badge = document.getElementById('high-risk-badge');
+    if (badge) { badge.textContent = (parseInt(badge.textContent || '0') || 0) + 1; badge.style.display = 'inline'; }
+  }
+
+  // Update the card directly (fast, no network call)
+  _updateScoreCard(data);
+  // If the AI Risk tab is open, also do a full reload after 400ms to sync all fields
+  var aiTab = document.getElementById('tab-airisk');
+  if (aiTab && aiTab.classList.contains('active')) {
+    setTimeout(loadAIRiskScores, 400);
   }
 });
+
+socket.on('ai_scan_complete', function() {
+  var aiTab = document.getElementById('tab-airisk');
+  if (aiTab && aiTab.classList.contains('active')) loadAIRiskScores();
+});
+
+function _showAITicker(name, email, score, label, color, delta, dStr, evType) {
+  var old = document.querySelectorAll('.ai-rt-ticker');
+  if (old.length >= 3) { old[0].remove(); }
+  var existing = document.querySelectorAll('.ai-rt-ticker');
+  var bottom = 80 + (existing.length * 108);
+  var initial = name.charAt(0) ? name.charAt(0).toUpperCase() : '?';
+  var dColor = delta > 0 ? '#ff6688' : delta < 0 ? '#00ff88' : '#888';
+  var dArrow = delta > 0 ? '▲' : delta < 0 ? '▼' : '●';
+
+  var el = document.createElement('div');
+  el.className = 'ai-rt-ticker';
+  el.style.position   = 'fixed';
+  el.style.bottom     = bottom + 'px';
+  el.style.right      = '20px';
+  el.style.zIndex     = '99998';
+  el.style.background = 'var(--surface)';
+  el.style.border     = '1px solid ' + color + '66';
+  el.style.borderLeft = '4px solid ' + color;
+  el.style.borderRadius = '10px';
+  el.style.padding    = '12px 15px';
+  el.style.fontFamily = '"Share Tech Mono",monospace';
+  el.style.fontSize   = '11px';
+  el.style.minWidth   = '255px';
+  el.style.maxWidth   = '315px';
+  el.style.boxShadow  = '0 8px 28px rgba(0,0,0,0.55)';
+  el.style.animation  = 'aiRtSlide 0.35s cubic-bezier(0.19,1,0.22,1)';
+  el.style.cursor     = 'pointer';
+
+  var closeBtn = document.createElement('span');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'color:var(--muted);font-size:13px;cursor:pointer;padding:0 3px;';
+  closeBtn.addEventListener('click', function(e) { e.stopPropagation(); el.remove(); });
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;';
+  var headerLabel = document.createElement('span');
+  headerLabel.style.cssText = 'color:' + color + ';font-size:9px;font-weight:700;letter-spacing:2px;';
+  headerLabel.textContent = '⚡ AI LIVE UPDATE';
+  header.appendChild(headerLabel);
+  header.appendChild(closeBtn);
+
+  var avatar = document.createElement('div');
+  avatar.style.cssText = 'width:36px;height:36px;border-radius:50%;flex-shrink:0;background:' + color + '22;border:1px solid ' + color + '55;display:flex;align-items:center;justify-content:center;color:' + color + ';font-size:15px;font-weight:900;';
+  avatar.textContent = initial;
+
+  var nameEl = document.createElement('div');
+  nameEl.style.cssText = 'color:var(--text);font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  nameEl.textContent = name;
+
+  var emailEl = document.createElement('div');
+  emailEl.style.cssText = 'color:var(--muted);font-size:9px;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  emailEl.textContent = email;
+
+  var nameWrap = document.createElement('div');
+  nameWrap.style.cssText = 'flex:1;min-width:0;';
+  nameWrap.appendChild(nameEl);
+  nameWrap.appendChild(emailEl);
+
+  var scoreEl = document.createElement('div');
+  scoreEl.style.cssText = 'color:' + color + ';font-size:24px;font-weight:900;line-height:1;';
+  scoreEl.textContent = score.toFixed(1);
+
+  var labelEl = document.createElement('div');
+  labelEl.style.cssText = 'color:' + color + ';font-size:9px;letter-spacing:1px;background:' + color + '22;padding:2px 7px;border-radius:4px;text-align:center;margin-top:2px;';
+  labelEl.textContent = label;
+
+  var scoreWrap = document.createElement('div');
+  scoreWrap.style.cssText = 'text-align:right;flex-shrink:0;';
+  scoreWrap.appendChild(scoreEl);
+  scoreWrap.appendChild(labelEl);
+
+  var body = document.createElement('div');
+  body.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:7px;';
+  body.appendChild(avatar);
+  body.appendChild(nameWrap);
+  body.appendChild(scoreWrap);
+
+  var deltaEl = document.createElement('span');
+  deltaEl.style.cssText = 'font-size:12px;font-weight:700;color:' + dColor + ';';
+  deltaEl.textContent = dArrow + ' ' + dStr;
+
+  var evEl = document.createElement('span');
+  evEl.style.cssText = 'color:var(--muted);font-size:9px;letter-spacing:1px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+  evEl.textContent = evType;
+
+  var footer = document.createElement('div');
+  footer.style.cssText = 'display:flex;align-items:center;gap:8px;padding-top:6px;border-top:1px solid var(--border);';
+  footer.appendChild(deltaEl);
+  footer.appendChild(evEl);
+
+  el.appendChild(header);
+  el.appendChild(body);
+  el.appendChild(footer);
+
+  el.addEventListener('click', function() {
+    var btn = document.querySelector('[data-p="airisk"]') || document.querySelector('[onclick*="airisk"]');
+    if (btn) btn.click();
+    setTimeout(loadAIRiskScores, 200);
+    el.remove();
+  });
+
+  document.body.appendChild(el);
+
+  setTimeout(function() {
+    if (!el.parentNode) return;
+    el.style.transition = 'opacity 0.4s,transform 0.4s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(130%)';
+    setTimeout(function() { if (el.parentNode) el.remove(); }, 420);
+  }, 6000);
+}
+
+if (!document.getElementById('ai-rt-style')) {
+  var _arts = document.createElement('style');
+  _arts.id = 'ai-rt-style';
+  _arts.textContent = '@keyframes aiRtSlide{from{transform:translateX(115%);opacity:0}to{transform:translateX(0);opacity:1}}.ai-rt-ticker:hover{border-color:rgba(255,255,255,0.25)!important;}';
+  document.head.appendChild(_arts);
+}
+
+// Direct card update — updates existing score card without full reload
+function _updateScoreCard(data) {
+  var email  = data.user_email || '';
+  var score  = parseFloat(data.risk_score || 0);
+  var label  = data.risk_label || 'LOW';
+  var color  = label === 'CRITICAL' ? '#ff3366' : label === 'HIGH' ? '#ff6688' : label === 'MEDIUM' ? '#ffcc00' : '#00ff88';
+  var pct    = Math.min(score, 100) + '%';
+
+  // FIX: use data-email attribute instead of broken font-family selector
+  var card = document.querySelector('.ai-emp-card[data-email="' + email + '"]');
+  if (!card) {
+    // Card not rendered yet — do a full reload
+    setTimeout(loadAIRiskScores, 500);
+    return;
+  }
+
+  // Update score number (the span with font-size:20px inside .ai-score-row)
+  var scoreEl = card.querySelector('.ai-score-row span:last-child');
+  if (scoreEl) { scoreEl.textContent = score.toFixed(1); scoreEl.style.color = color; }
+
+  // Update progress bar
+  var barEl = card.querySelector('.ai-bar-fill');
+  if (barEl) { barEl.style.width = pct; barEl.style.background = color; }
+
+  // Update badge
+  var badgeEl = card.querySelector('.ai-risk-badge');
+  if (badgeEl) {
+    badgeEl.textContent = label;
+    badgeEl.style.color = color;
+    badgeEl.style.background = color + '22';
+    badgeEl.style.border = '1px solid ' + color + '44';
+  }
+
+  // Flash card border to draw attention
+  card.style.transition = 'border-color 0.5s,border-left-width 0.3s';
+  card.style.borderColor = color + '99';
+  card.style.borderLeftWidth = '3px';
+  setTimeout(function() { card.style.borderColor = color + '33'; card.style.borderLeftWidth = ''; }, 1500);
+}
+
+// Poll every 10 seconds while AI Risk Engine tab is open
+// FIX: tab visibility is controlled by CSS class "active", not style.display
+setInterval(function() {
+  var aiTab = document.getElementById('tab-airisk');
+  if (aiTab && aiTab.classList.contains('active')) {
+    loadAIRiskScores();
+  }
+}, 10000);
+
+
 
 // ── SESSION EXTENSION REQUESTS ────────────────────────────────────────────────
 var pendingExtensions = {}; // keyed by email

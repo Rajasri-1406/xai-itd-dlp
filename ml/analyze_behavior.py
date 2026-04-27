@@ -10,11 +10,16 @@ from pymongo import MongoClient
 from datetime import datetime, timedelta
 
 # ── Config ─────────────────────────────────────────────────────────────────
-DATASET_PATH    = r"D:\rajasri\xai_itd_dlp\dataset"
-MONGO_URI       = "mongodb://localhost:27017/"
-DB_NAME         = "xai_itd_dlp"
+# Portable path — works on Render (Linux) and Windows localhost
+DATASET_PATH    = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dataset")
 WORK_HOUR_START = 9
 WORK_HOUR_END   = 18
+
+try:
+    from config import MONGO_URI, DB_NAME
+except Exception:
+    MONGO_URI = "mongodb://localhost:27017/"
+    DB_NAME   = "xai_itd_dlp"
 
 client = MongoClient(MONGO_URI)
 db     = client[DB_NAME]
@@ -310,6 +315,7 @@ def build_all_employee_profiles(days_back=30):
 
     for email in employees:
         employee_has_any_activity = False
+        today_profile_written = False
         for day in date_list:
             feat = build_employee_features(email, day)
             activity_sum = (
@@ -321,15 +327,21 @@ def build_all_employee_profiles(days_back=30):
                 feat["created_at"] = datetime.utcnow()
                 records.append(feat)
                 employee_has_any_activity = True
+                if day == today:
+                    today_profile_written = True
 
-        # Cold start fix: new employee with zero activity
-        # -> insert one zero-activity record so they appear in scoring as LOW/0
-        if not employee_has_any_activity:
+        # Always ensure a today profile exists so threat_scores gets a today entry.
+        # If the employee had activity on other days but none today, write a zero
+        # profile for today so detect_anomaly scores them with today's date.
+        if not today_profile_written:
             zero_feat = build_employee_features(email, today)
             zero_feat["created_at"] = datetime.utcnow()
-            zero_feat["note"]       = "no_activity"
+            zero_feat["note"]       = "no_activity_today"
             records.append(zero_feat)
-            print(f"    [NEW] {email} — no activity found, created zero profile")
+            if not employee_has_any_activity:
+                print(f"    [NEW] {email} — no activity found, created zero profile")
+            else:
+                print(f"    [TODAY] {email} — no activity today, created zero today profile")
 
     col = db["behavior_profiles"]
     col.drop()
