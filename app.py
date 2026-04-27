@@ -7,6 +7,14 @@ Tasks:
   3. Security Policy Enforcement and Event Logging
 """
 
+# ── Eventlet monkey-patch — MUST be before all other imports ─────────────────
+# Works for both Render (gunicorn+eventlet worker) and local dev (socketio.run)
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
+import eventlet
+eventlet.monkey_patch()
+# ─────────────────────────────────────────────────────────────────────────────
+
 import random
 import subprocess
 import smtplib
@@ -65,7 +73,16 @@ from models.user import (
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    # "eventlet" required for Render (gunicorn+eventlet worker).
+    # Also works locally via socketio.run() — no change needed per env.
+    async_mode="eventlet",
+    manage_session=False,
+    logger=False,
+    engineio_logger=False
+)
 
 # ── Active session tokens — MongoDB-backed so they survive Render restarts ──
 from models.user import users_col as _users_col_ref
@@ -249,11 +266,27 @@ def get_location_from_ip(ip):
 
 
 def send_otp_email(to_email, otp, name):
+    """
+    Send OTP email using real (unpatched) stdlib smtplib/ssl.
+    eventlet.monkey_patch() patches socket+ssl globally which breaks
+    STARTTLS locally. We use eventlet.patcher.original() to get the
+    real modules so SMTP works on both localhost and Render.
+    """
     try:
+        # Get original (unpatched) smtplib and ssl — safe under eventlet
+        try:
+            import eventlet.patcher as _ep
+            _smtplib = _ep.original("smtplib")
+            _ssl     = _ep.original("ssl")
+        except Exception:
+            # eventlet not available or not monkey-patched — use stdlib directly
+            import smtplib as _smtplib
+            import ssl as _ssl
+
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = " XAI-ITD-DLP Login OTP"
-        msg["From"] = SMTP_EMAIL
-        msg["To"] = to_email
+        msg["Subject"] = "XAI-ITD-DLP Login OTP"
+        msg["From"]    = SMTP_EMAIL
+        msg["To"]      = to_email
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
@@ -262,19 +295,22 @@ def send_otp_email(to_email, otp, name):
           <div style="font-size:40px;font-weight:bold;letter-spacing:10px;color:#fff;
                       background:#111;padding:20px;border-radius:8px;text-align:center;
                       border:2px solid #00ff88;">{otp}</div>
-          <p style="color:#888;margin-top:20px;"> Expires in 2 minutes. Do not share this code.</p>
+          <p style="color:#888;margin-top:20px;">Expires in 2 minutes. Do not share this code.</p>
           <p style="color:#ff4444;">If you did not request this, contact your administrator immediately.</p>
         </div>
         """.format(name=name, otp=otp)
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        with _smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15) as server:
+            server.ehlo()
             server.starttls()
+            server.ehlo()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
         print("[EMAIL] OTP sent successfully to " + to_email)
         return True
     except Exception as e:
-        print("[EMAIL ERROR] " + str(e))
+        print("[EMAIL ERROR] OTP send failed: " + str(e))
+        import traceback; traceback.print_exc()
         return False
 
 
@@ -296,6 +332,13 @@ def send_meeting_invite_email(to_email, client_name, employee_name,
     print("[EMAIL] Sending meeting invite to: " + str(to_email))
     print("[EMAIL] SMTP: " + str(SMTP_SERVER) + ":" + str(SMTP_PORT) + " from " + str(SMTP_EMAIL))
     try:
+        # Use original unpatched smtplib — eventlet monkey_patch breaks STARTTLS locally
+        try:
+            import eventlet.patcher as _ep
+            _smtplib = _ep.original("smtplib")
+        except Exception:
+            import smtplib as _smtplib
+
         msg            = MIMEMultipart("alternative")
         msg["Subject"] = "Your Meeting Invitation"
         msg["From"]    = SMTP_EMAIL
@@ -331,7 +374,7 @@ def send_meeting_invite_email(to_email, client_name, employee_name,
 
         # Try STARTTLS (port 587) — same as OTP email
         try:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15) as server:
+            with _smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -339,7 +382,7 @@ def send_meeting_invite_email(to_email, client_name, employee_name,
                 server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
         except Exception as e1:
             print("[EMAIL] STARTTLS failed (" + str(e1) + "), trying SSL port 465...")
-            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=15) as server:
+            with _smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=15) as server:
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
 
@@ -386,13 +429,31 @@ def login_required(roles=None):
 
 
 def token_required(f):
+    """
+    Auth for agent POST /api/agent/event.
+    Accepts token from JSON body.
+    Falls back to DB lookup if active_tokens was wiped (app restart).
+    """
     @wraps(f)
     def decorated(*args, **kwargs):
-        data = request.json or {}
-        token = data.get("token")
-        if not token or token not in active_tokens:
-            return jsonify({"error": "Invalid token"}), 401
-        return f(*args, **kwargs)
+        data  = request.json or {}
+        token = data.get("token", "").strip()
+        if not token:
+            return jsonify({"error": "Token missing"}), 401
+        # 1. Fast in-memory check
+        if token in active_tokens:
+            return f(*args, **kwargs)
+        # 2. DB fallback — handles app restarts that wipe active_tokens
+        try:
+            from models.user import db as _udb
+            rec = _udb["sessions"].find_one({"token": token})
+            if rec and rec.get("email"):
+                # Restore into memory so next call is fast
+                active_tokens[token] = rec["email"]
+                return f(*args, **kwargs)
+        except Exception:
+            pass
+        return jsonify({"error": "Invalid token"}), 401
     return decorated
 
 
@@ -437,6 +498,7 @@ def logout():
     email = session.get("user_email")
     if email:
         log_activity(email, "LOGOUT", "User logged out.", session.get("location_str", "Unknown"), "-", "LOW")
+        ai_score_now(email, "LOGOUT", blocked=False, socketio_instance=socketio)
     session.clear()
     return redirect(url_for("login_page"))
 
@@ -566,6 +628,17 @@ def verify_otp():
     token   = secrets.token_hex(32)
 
     active_tokens[token] = email
+
+    # Persist token to DB so agent /api/agent/event survives app restarts
+    try:
+        from models.user import db as _udb
+        _udb["sessions"].replace_one(
+            {"email": email},
+            {"email": email, "token": token, "created_at": datetime.utcnow()},
+            upsert=True
+        )
+    except Exception as _se:
+        print("[AUTH] Session DB persist failed: " + str(_se))
 
     session["user_email"] = email
     session["role"]       = user["role"]
@@ -1694,6 +1767,7 @@ def agent_event_browser():
 
     log_activity(request.auth_email, event_type, detail, "Browser", request.remote_addr, risk)
     log_security_event(request.auth_email, event_type, detail, "Browser", request.remote_addr, blocked)
+    ai_score_now(request.auth_email, event_type, blocked=blocked, socketio_instance=socketio)
 
     emit_to_managers("new_event", {
         "type":     event_type,
@@ -3383,6 +3457,21 @@ def employee_notifications():
 
 # --- Run ----------------------------------------------------------------------
 
+# ── Scheduler startup ─────────────────────────────────────────────────────────
+# On Render: gunicorn never runs __main__, so we start scheduler here.
+# On localhost: __main__ also calls start_scheduler, but start_scheduler()
+#               is idempotent (_scheduler_started flag) so it only runs once.
+from config import IS_PRODUCTION
+if IS_PRODUCTION:
+    try:
+        from ml.scheduler import start_scheduler
+        start_scheduler(socketio_instance=socketio)
+        print("[STARTUP] AI scheduler started (Render/production mode)")
+    except Exception as _sched_err:
+        print(f"[STARTUP] Scheduler failed to start: {_sched_err}")
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("  XAI-ITD-DLP Framework - Module 1 Starting...")
@@ -3393,6 +3482,10 @@ if __name__ == "__main__":
         sys.exit(1)
     normalize_existing_emails()
     print("[APP] Visit: http://127.0.0.1:5000")
+    # Scheduler for local dev (IS_PRODUCTION=False so block above skipped)
     from ml.scheduler import start_scheduler
     start_scheduler(socketio_instance=socketio)
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    # Use PORT env var if set (e.g. testing locally with Render-like env),
+    # otherwise default to 5000
+    _port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=_port, debug=True, use_reloader=False)
