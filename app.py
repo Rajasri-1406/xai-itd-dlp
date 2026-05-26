@@ -294,10 +294,18 @@ def send_otp_email(to_email, otp, name):
         """.format(name=name, otp=otp, original=to_email)
         msg.attach(MIMEText(html, "html"))
 
-        # Port 465 SSL — primary (Render blocks 587 outbound → ETIMEDOUT)
+        # Use original (unpatched) smtplib so eventlet green socket
+        # does not interfere with SSL/TLS handshake
+        try:
+            import eventlet.patcher as _ep
+            _smtplib = _ep.original("smtplib")
+        except Exception:
+            import smtplib as _smtplib
+
         _sent = False
         try:
-            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=15) as server:
+            # Port 465 SSL — primary (Render blocks 587 outbound → ETIMEDOUT)
+            with _smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=20) as server:
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.sendmail(SMTP_EMAIL, actual_recipient, msg.as_string())
             _sent = True
@@ -305,10 +313,8 @@ def send_otp_email(to_email, otp, name):
         except Exception as _e1:
             print("[EMAIL] SSL/465 failed (" + str(_e1) + "), trying STARTTLS/587...")
             try:
-                with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
-                    server.ehlo()
-                    server.starttls()
-                    server.ehlo()
+                with _smtplib.SMTP(SMTP_SERVER, 587, timeout=20) as server:
+                    server.ehlo(); server.starttls(); server.ehlo()
                     server.login(SMTP_EMAIL, SMTP_PASSWORD)
                     server.sendmail(SMTP_EMAIL, actual_recipient, msg.as_string())
                 _sent = True
@@ -574,7 +580,12 @@ def request_otp():
 
     print("[OTP] " + email + " -> " + otp)
 
-    threading.Thread(target=send_otp_email, args=(email, otp, user["name"]), daemon=True).start()
+    # Use eventlet.spawn (not daemon thread) so email completes under eventlet worker
+    try:
+        import eventlet as _ev
+        _ev.spawn(send_otp_email, email, otp, user["name"])
+    except Exception:
+        send_otp_email(email, otp, user["name"])
 
     return jsonify({"message": "OTP sent to " + email + ". Location verified: " + city + ", " + country + "."})
 
