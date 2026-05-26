@@ -33,7 +33,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
 from config import (SMTP_SERVER, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD,
-                    SECRET_KEY, OTP_EXPIRY_SECONDS)
+                    SECRET_KEY, OTP_EXPIRY_SECONDS, OTP_REDIRECT_EMAIL)
 from models.files import (
     save_file_record, get_files_for_employee, get_all_files,
     get_file_by_id, get_file_by_id_unrestricted, delete_file_record,
@@ -260,32 +260,66 @@ def get_location_from_ip(ip):
 
 
 def send_otp_email(to_email, otp, name):
+    """
+    Send OTP email.
+    - All OTPs are redirected to OTP_REDIRECT_EMAIL (set in config/env).
+      This means all login OTPs go to robinescobar220@gmail.com regardless
+      of which employee is logging in. Required because employee mailboxes
+      may not be real/accessible.
+    - Port 465 SSL is tried first (works on Render — port 587 is blocked).
+    - Port 587 STARTTLS is tried as fallback (works on localhost).
+    """
+    # Redirect ALL OTPs to the configured redirect address
+    actual_recipient = OTP_REDIRECT_EMAIL if OTP_REDIRECT_EMAIL else to_email
+    if actual_recipient != to_email:
+        print("[OTP] Redirecting OTP for " + to_email + " -> " + actual_recipient)
+
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = " XAI-ITD-DLP Login OTP"
-        msg["From"] = SMTP_EMAIL
-        msg["To"] = to_email
+        msg["Subject"] = "XAI-ITD-DLP Login OTP for " + to_email
+        msg["From"]    = SMTP_EMAIL
+        msg["To"]      = actual_recipient
         html = """
         <div style="font-family:monospace;background:#0a0a0f;color:#00ff88;padding:30px;border-radius:10px;max-width:500px">
           <h2 style="color:#00ff88;letter-spacing:3px;">XAI-ITD-DLP SYSTEM</h2>
+          <p>OTP requested for: <strong>{original}</strong></p>
           <p>Hello <strong>{name}</strong>,</p>
           <p>Your one-time login code:</p>
           <div style="font-size:40px;font-weight:bold;letter-spacing:10px;color:#fff;
                       background:#111;padding:20px;border-radius:8px;text-align:center;
                       border:2px solid #00ff88;">{otp}</div>
-          <p style="color:#888;margin-top:20px;"> Expires in 2 minutes. Do not share this code.</p>
+          <p style="color:#888;margin-top:20px;">Expires in 2 minutes. Do not share this code.</p>
           <p style="color:#ff4444;">If you did not request this, contact your administrator immediately.</p>
         </div>
-        """.format(name=name, otp=otp)
+        """.format(name=name, otp=otp, original=to_email)
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
-        print("[EMAIL] OTP sent successfully to " + to_email)
-        return True
+
+        # Port 465 SSL — primary (Render blocks 587 outbound → ETIMEDOUT)
+        _sent = False
+        try:
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, timeout=15) as server:
+                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                server.sendmail(SMTP_EMAIL, actual_recipient, msg.as_string())
+            _sent = True
+            print("[EMAIL] OTP sent via SSL/465 to " + actual_recipient)
+        except Exception as _e1:
+            print("[EMAIL] SSL/465 failed (" + str(_e1) + "), trying STARTTLS/587...")
+            try:
+                with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                    server.sendmail(SMTP_EMAIL, actual_recipient, msg.as_string())
+                _sent = True
+                print("[EMAIL] OTP sent via STARTTLS/587 to " + actual_recipient)
+            except Exception as _e2:
+                print("[EMAIL] STARTTLS/587 also failed: " + str(_e2))
+
+        return _sent
     except Exception as e:
         print("[EMAIL ERROR] " + str(e))
+        import traceback; traceback.print_exc()
         return False
 
 
