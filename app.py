@@ -7,6 +7,13 @@ Tasks:
   3. Security Policy Enforcement and Event Logging
 """
 
+# ── eventlet monkey-patch — MUST be before every other import ────────────────
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+import eventlet
+eventlet.monkey_patch()
+# ─────────────────────────────────────────────────────────────────────────────
+
 import random
 import subprocess
 import smtplib
@@ -65,7 +72,7 @@ from models.user import (
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False, logger=False, engineio_logger=False)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet", manage_session=False, logger=False, engineio_logger=False)
 
 # ── Active session tokens — MongoDB-backed so they survive Render restarts ──
 from models.user import users_col as _users_col_ref
